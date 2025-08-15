@@ -40,7 +40,7 @@ A production-ready, full-stack web application that analyzes customer feedback u
 ## 🚀 Quick Setup
 
 ### Prerequisites
-- Node.js 18+ and Python 3.11+
+- Node.js 20 LTS and Python 3.13
 - Azure subscription (free tier sufficient)
 - API keys: Azure Text Analytics, Azure Speech, OpenAI
 
