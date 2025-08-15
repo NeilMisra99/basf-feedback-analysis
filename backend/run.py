@@ -29,8 +29,6 @@ from app import create_app
 app = create_app()
 
 if __name__ == '__main__':
-    # Use PORT from environment (fly.io sets this to 8080)
-    # Fallback to 5000 for local development
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
     
