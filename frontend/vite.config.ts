@@ -11,6 +11,10 @@ export default defineConfig({
     }),
     tailwindcss()
   ],
+  // Define environment variables for browser
+  define: {
+    'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL)
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -38,7 +42,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+        target: process.env.REACT_APP_API_URL || 'http://localhost:5001',
         changeOrigin: true,
         secure: false,
       },
