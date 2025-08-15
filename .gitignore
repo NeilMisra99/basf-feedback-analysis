@@ -69,6 +69,7 @@ coverage/
 # Docs
 docs/
 # Documentation and Markdown files
+!README.md
 *.md
 
 # Claude
