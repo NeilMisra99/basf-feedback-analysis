@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DashboardSkeleton, FeedbackFormSkeleton } from "./components/ui/loading";
 
 // Lazy load components for better code splitting
+// Azure deployment test
 const FeedbackForm = lazy(() => import("./components/FeedbackForm"));
 const Dashboard = lazy(() => import("./components/Dashboard"));
 
