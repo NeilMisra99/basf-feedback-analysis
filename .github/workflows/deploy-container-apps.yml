@@ -50,6 +50,8 @@ jobs:
           --resource-group feedback-analysis-rg \
           --container-name ${{ env.CONTAINER_APP_NAME }} \
           --image ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --min-replicas 1 \
+          --max-replicas 10 \
           --set-env-vars \
             FLASK_ENV=production \
             PORT=8080 \
