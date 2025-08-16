@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +14,13 @@ import type { Feedback, DashboardStats } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import { DashboardSkeleton } from "./ui/loading";
 
-function Dashboard() {
+export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -37,20 +37,21 @@ function Dashboard() {
         );
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : typeof err === 'object' && err !== null && 'message' in err
-        ? String((err as { message: unknown }).message)
-        : "Failed to load dashboard data";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Failed to load dashboard data";
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData]);
+  }, []); // Only run once on mount
 
   // Setup SSE connection for real-time updates - delay until initial load is complete
   useEffect(() => {
@@ -58,11 +59,13 @@ function Dashboard() {
     if (loading) return;
     const handleSSEEvent = (event: SSEEvent) => {
       switch (event.type) {
-        case 'feedback_update':
+        case "feedback_update":
           if (event.data) {
-            setFeedback(prevFeedback => {
-              const existingIndex = prevFeedback.findIndex(f => f.id === event.data!.id);
-              
+            setFeedback((prevFeedback) => {
+              const existingIndex = prevFeedback.findIndex(
+                (f) => f.id === event.data!.id
+              );
+
               if (existingIndex >= 0) {
                 // Update existing feedback
                 const updated = [...prevFeedback];
@@ -75,15 +78,15 @@ function Dashboard() {
             });
 
             // Update stats if needed
-            if (event.data.processing_status === 'completed') {
+            if (event.data.processing_status === "completed") {
               // Refresh stats when feedback processing completes
               loadDashboardData();
             }
           }
           break;
-        case 'connected':
+        case "connected":
           break;
-        case 'heartbeat':
+        case "heartbeat":
           // SSE connection is alive
           break;
       }
@@ -98,7 +101,7 @@ function Dashboard() {
       removeListener();
       sseService.disconnect();
     };
-  }, [loadDashboardData, loading]);
+  }, [loading]); // Only dependency is loading state
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -229,5 +232,3 @@ function Dashboard() {
     </div>
   );
 }
-
-export default memo(Dashboard);

@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ interface FeedbackCardProps {
   feedback: Feedback;
 }
 
-function FeedbackCard({ feedback }: FeedbackCardProps) {
+export default function FeedbackCard({ feedback }: FeedbackCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioState, setAudioState] = useState<AudioState>({
@@ -51,8 +51,7 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
   const isCurrentlyPlaying =
     audioState.feedbackId === feedback.id && audioState.isPlaying;
 
-  // Memoize icon components for better performance
-  const getSentimentIcon = useCallback((sentiment: string) => {
+  const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case "positive":
         return <Smile className="h-4 w-4" />;
@@ -63,9 +62,9 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
       default:
         return <Meh className="h-4 w-4" />;
     }
-  }, []);
+  };
 
-  const getSentimentClassNames = useCallback((sentiment: string): string => {
+  const getSentimentClassNames = (sentiment: string): string => {
     switch (sentiment) {
       case "positive":
         return "bg-green-100 text-green-800 border-green-200";
@@ -76,9 +75,9 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }, []);
+  };
 
-  const toggleAudio = useCallback(async () => {
+  const toggleAudio = async () => {
     if (!feedback.audio_file || !feedback.audio_url) return;
 
     try {
@@ -98,18 +97,13 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
       setAudioLoading(false);
       console.error("Error with audio playback:", error);
     }
-  }, [
-    feedback.id,
-    feedback.audio_file,
-    feedback.audio_url,
-    isCurrentlyPlaying,
-  ]);
+  };
 
-  const formatDate = useCallback((dateString: string) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
-  }, []);
+  };
 
-  const getProcessingStatusDisplay = useCallback(() => {
+  const getProcessingStatusDisplay = () => {
     switch (feedback.processing_status) {
       case "processing":
         return {
@@ -132,7 +126,7 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
       default:
         return null;
     }
-  }, [feedback.processing_status]);
+  };
 
   const maxLength = 200;
   const shouldShowExpand = feedback.text.length > maxLength;
@@ -256,5 +250,3 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
     </Card>
   );
 }
-
-export default memo(FeedbackCard);

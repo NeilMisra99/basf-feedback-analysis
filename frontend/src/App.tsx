@@ -1,13 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, LayoutDashboard } from "lucide-react";
-import { Suspense, lazy } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { FeedbackFormSkeleton } from "./components/ui/loading";
 import Dashboard from "./components/Dashboard";
-
-// Lazy load only the feedback form
-// Dashboard loads immediately for faster tab switching
-const FeedbackForm = lazy(() => import("./components/FeedbackForm"));
+import FeedbackForm from "./components/FeedbackForm";
 
 function App() {
   return (
@@ -45,9 +40,7 @@ function App() {
 
             <TabsContent value="submit" className="bg-muted p-8 rounded-2xl">
               <ErrorBoundary>
-                <Suspense fallback={<FeedbackFormSkeleton />}>
-                  <FeedbackForm />
-                </Suspense>
+                <FeedbackForm />
               </ErrorBoundary>
             </TabsContent>
 
