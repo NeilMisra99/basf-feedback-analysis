@@ -3,12 +3,12 @@
  */
 
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import type { ReactElement } from "react";
+import type { LucideIcon } from "lucide-react";
 
 export type ProcessingStatus = "processing" | "completed" | "failed";
 
 export interface ProcessingStatusDisplay {
-  icon: ReactElement;
+  icon: LucideIcon;
   text: string;
   className: string;
 }
@@ -17,19 +17,19 @@ export function getProcessingStatusDisplay(status: ProcessingStatus): Processing
   switch (status) {
     case "processing":
       return {
-        icon: <Loader2 className="h-4 w-4 animate-spin" />,
+        icon: Loader2,
         text: "Processing...",
         className: "bg-blue-100 text-blue-800 border-blue-200",
       };
     case "completed":
       return {
-        icon: <CheckCircle className="h-4 w-4" />,
+        icon: CheckCircle,
         text: "Completed",
         className: "bg-green-100 text-green-800 border-green-200",
       };
     case "failed":
       return {
-        icon: <AlertCircle className="h-4 w-4" />,
+        icon: AlertCircle,
         text: "Failed",
         className: "bg-red-100 text-red-800 border-red-200",
       };

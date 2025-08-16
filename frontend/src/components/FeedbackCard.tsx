@@ -88,7 +88,9 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
                 <Badge
                   className={`gap-1 ${processingStatusDisplay.className}`}
                 >
-                  {processingStatusDisplay.icon}
+                  <processingStatusDisplay.icon 
+                    className={`h-4 w-4 ${feedback.processing_status === 'processing' ? 'animate-spin' : ''}`} 
+                  />
                   {processingStatusDisplay.text}
                 </Badge>
               )}

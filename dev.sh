@@ -25,13 +25,13 @@ fi
 
 # Install backend dependencies
 echo "📦 Installing backend dependencies..."
-if [ ! -d "backend/venv" ]; then
+if [ ! -d "backend/.venv" ]; then
     echo "🐍 Creating Python virtual environment..."
-    (cd backend && python -m venv venv)
+    (cd backend && python -m venv .venv)
 fi
 
 echo "🔧 Activating virtual environment and installing dependencies..."
-(cd backend && source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt)
+(cd backend && source .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt)
 
 # Install frontend dependencies
 echo "📦 Installing frontend dependencies..."
@@ -42,7 +42,7 @@ echo ""
 
 # Start backend in background
 echo "📡 Starting backend server (Flask)..."
-(cd backend && source venv/bin/activate && python application.py) &
+(cd backend && source .venv/bin/activate && export PYTHONPATH=. && python application.py) &
 BACKEND_PID=$!
 
 # Give backend time to start
