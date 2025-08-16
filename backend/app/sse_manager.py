@@ -1,6 +1,4 @@
-"""
-Server-Sent Events manager for real-time feedback updates.
-"""
+"""Server-Sent Events manager for real-time feedback updates."""
 
 import json
 import logging
@@ -13,7 +11,6 @@ from app.models import Feedback
 logger = logging.getLogger(__name__)
 
 class SSEManager:
-    """Manages Server-Sent Events connections for real-time updates."""
     
     def __init__(self):
         self.clients: Dict[str, 'SSEClient'] = {}
@@ -41,32 +38,32 @@ class SSEManager:
         """Send feedback update to all connected clients."""
         from app.routes import _build_complete_feedback_data
         
-        # Build complete feedback data with all relationships
-        feedback_data = _build_complete_feedback_data(feedback)
-        
         event_data = {
             'type': 'feedback_update',
-            'data': feedback_data
+            'data': _build_complete_feedback_data(feedback)
         }
         
-        # Send to all connected clients
         with self.lock:
-            disconnected_clients = []
-            for client_id, client in self.clients.items():
-                try:
-                    client.send_event(event_data)
-                except Exception as e:
-                    logger.warning(f"Failed to send event to client {client_id}: {str(e)}")
-                    disconnected_clients.append(client_id)
-                    
-            # Remove disconnected clients
+            disconnected_clients = [
+                client_id for client_id, client in self.clients.items()
+                if not self._send_event_to_client(client, event_data)
+            ]
+            
             for client_id in disconnected_clients:
                 self.remove_client(client_id)
                 
             logger.info(f"Sent feedback update for {feedback.id} to {len(self.clients)} clients")
+    
+    def _send_event_to_client(self, client, event_data):
+        """Send event to a single client. Returns False if client disconnected."""
+        try:
+            client.send_event(event_data)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to send event to client {client.client_id}: {str(e)}")
+            return False
 
 class SSEClient:
-    """Represents a single SSE client connection."""
     
     def __init__(self, client_id: str, manager: SSEManager):
         self.client_id = client_id
@@ -95,11 +92,9 @@ class SSEClient:
         try:
             while self.is_connected:
                 try:
-                    # Get event with timeout to allow periodic checks
                     event = self.message_queue.get(timeout=1)
                     yield event
                 except queue.Empty:
-                    # Send heartbeat if no events
                     yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
         except Exception as e:
             logger.error(f"Error in SSE event generator for {self.client_id}: {str(e)}")

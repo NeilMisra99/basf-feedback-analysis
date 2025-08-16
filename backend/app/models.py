@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Index
 import uuid
 
@@ -13,8 +13,8 @@ class Feedback(db.Model):
     text = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), index=True)  # Add index for filtering
     processing_status = db.Column(db.String(20), default='processing', index=True)  # processing, completed, failed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)  # Add index for sorting
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)  # Add index for sorting
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Optimized relationships with lazy loading control
     sentiment_analysis = db.relationship('SentimentAnalysis', backref='feedback', uselist=False, lazy='select')
@@ -44,7 +44,7 @@ class SentimentAnalysis(db.Model):
     feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
     sentiment = db.Column(db.String(20), nullable=False, index=True)  # Add index for grouping
     confidence_score = db.Column(db.Float)
-    processed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    processed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     
     # Composite index for dashboard query optimization
     __table_args__ = (
@@ -67,7 +67,7 @@ class AIResponse(db.Model):
     feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
     response_text = db.Column(db.Text, nullable=False)
     model_used = db.Column(db.String(50), index=True)  # Add index for analytics
-    generated_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    generated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     
     def to_dict(self):
         return {
@@ -88,7 +88,7 @@ class AudioFile(db.Model):
     duration_seconds = db.Column(db.Float)
     file_size = db.Column(db.Integer, nullable=True)  # File size in bytes
     storage_type = db.Column(db.String(20), default='local')  # 'local' or 'blob'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     
     def to_dict(self):
         return {

@@ -1,7 +1,4 @@
-"""
-OpenAI service for generating contextual responses based on sentiment analysis.
-Provides intelligent response generation with fallback capabilities.
-"""
+"""OpenAI service for generating contextual responses."""
 
 import os
 import logging
@@ -13,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIResponseService(BaseExternalService):
-    """Enhanced OpenAI service for sentiment-aware response generation."""
     
     def __init__(self):
         super().__init__("OpenAI")

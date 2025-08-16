@@ -1,6 +1,4 @@
-"""
-Background processing system for async feedback processing with real-time updates.
-"""
+"""Background processing system for async feedback processing."""
 
 import threading
 import time
@@ -13,8 +11,16 @@ from app.services.feedback_processor import FeedbackProcessor
 
 logger = logging.getLogger(__name__)
 
+def _get_feedback_with_relations(feedback_id):
+    """Helper to get feedback with all related data."""
+    from sqlalchemy.orm import joinedload
+    return Feedback.query.options(
+        joinedload(Feedback.sentiment_analysis),
+        joinedload(Feedback.ai_response),
+        joinedload(Feedback.audio_file)
+    ).get(feedback_id)
+
 class BackgroundProcessor:
-    """Handles async feedback processing with real-time status updates."""
     
     def __init__(self):
         self.processing_queue = Queue()
@@ -58,12 +64,10 @@ class BackgroundProcessor:
         """Main worker loop for processing feedback."""
         while self.is_running:
             try:
-                # Get feedback ID from queue (timeout to allow graceful shutdown)
                 feedback_id = self.processing_queue.get(timeout=1)
                 self._process_feedback(feedback_id)
                 self.processing_queue.task_done()
             except:
-                # Timeout is expected when queue is empty
                 continue
                 
     def _process_feedback(self, feedback_id: str):
@@ -75,51 +79,26 @@ class BackgroundProcessor:
         with self.app.app_context():
             try:
                 logger.info(f"Starting processing for feedback {feedback_id}")
-                
-                # Process through the complete pipeline
                 success = self.feedback_processor.process_feedback_complete(feedback_id)
-                
-                # Update status in database and send real-time update
-                from sqlalchemy.orm import joinedload
-                feedback = Feedback.query.options(
-                    joinedload(Feedback.sentiment_analysis),
-                    joinedload(Feedback.ai_response),
-                    joinedload(Feedback.audio_file)
-                ).get(feedback_id)
-                
-                if feedback:
-                    feedback.processing_status = 'completed' if success else 'failed'
-                    db.session.commit()
-                    
-                    # Send real-time update with complete feedback data
-                    if self.sse_manager:
-                        self.sse_manager.send_feedback_update(feedback)
-                        
-                    logger.info(f"Feedback {feedback_id} processing {'completed' if success else 'failed'}")
-                else:
-                    logger.error(f"Feedback {feedback_id} not found in database")
-                    
+                self._update_feedback_status(feedback_id, 'completed' if success else 'failed')
+                logger.info(f"Feedback {feedback_id} processing {'completed' if success else 'failed'}")
             except Exception as e:
                 logger.error(f"Error processing feedback {feedback_id}: {str(e)}")
-                
-                # Mark as failed in database
-                try:
-                    from sqlalchemy.orm import joinedload
-                    feedback = Feedback.query.options(
-                        joinedload(Feedback.sentiment_analysis),
-                        joinedload(Feedback.ai_response),
-                        joinedload(Feedback.audio_file)
-                    ).get(feedback_id)
-                    
-                    if feedback:
-                        feedback.processing_status = 'failed'
-                        db.session.commit()
-                        
-                        # Send real-time update
-                        if self.sse_manager:
-                            self.sse_manager.send_feedback_update(feedback)
-                except Exception as db_error:
-                    logger.error(f"Failed to update feedback status: {str(db_error)}")
+                self._update_feedback_status(feedback_id, 'failed')
+    
+    def _update_feedback_status(self, feedback_id: str, status: str):
+        """Update feedback status and send real-time update."""
+        try:
+            feedback = _get_feedback_with_relations(feedback_id)
+            if feedback:
+                feedback.processing_status = status
+                db.session.commit()
+                if self.sse_manager:
+                    self.sse_manager.send_feedback_update(feedback)
+            else:
+                logger.error(f"Feedback {feedback_id} not found in database")
+        except Exception as e:
+            logger.error(f"Failed to update feedback status: {str(e)}")
 
 # Global instance
 background_processor = BackgroundProcessor()

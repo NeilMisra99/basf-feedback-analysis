@@ -12,13 +12,14 @@ import { useFeedback } from "../contexts/FeedbackContext";
 import type { Feedback, DashboardStats } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import { DashboardSkeleton } from "./ui/loading";
+import { getErrorMessageWithFallback } from "../lib/errorUtils";
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Use feedback context for real-time updates
   const { latestFeedback, refreshTrigger } = useFeedback();
 
@@ -27,7 +28,6 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      // Load real dashboard data from API
       const statsResponse = await feedbackAPI.getDashboardStats();
 
       if (statsResponse.status === "success" && statsResponse.data) {
@@ -39,50 +39,62 @@ export default function Dashboard() {
         );
       }
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === "object" && err !== null && "message" in err
-            ? String((err as { message: unknown }).message)
-            : "Failed to load dashboard data";
-      setError(errorMessage);
+      setError(
+        getErrorMessageWithFallback(err, "Failed to load dashboard data")
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Load data on mount
   useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Handle real-time feedback updates
-  useEffect(() => {
-    if (latestFeedback) {
-      setFeedback((prevFeedback) => {
-        const existingIndex = prevFeedback.findIndex(
-          (f) => f.id === latestFeedback.id
-        );
-
-        if (existingIndex >= 0) {
-          // Update existing feedback
-          const updated = [...prevFeedback];
-          updated[existingIndex] = latestFeedback;
-          return updated;
-        } else {
-          // Add new feedback (insert at beginning to maintain chronological order)
-          return [latestFeedback, ...prevFeedback.slice(0, 4)]; // Keep only 5 most recent
-        }
-      });
-    }
-  }, [latestFeedback]);
-
-  // Refresh data when context triggers refresh (for stats update)
-  useEffect(() => {
-    if (refreshTrigger > 0) {
+    // Initial load or refresh trigger
+    if (refreshTrigger >= 0) {
       loadDashboardData();
     }
   }, [refreshTrigger]);
+
+  // Optimized real-time feedback updates
+  useEffect(() => {
+    if (!latestFeedback || loading) return;
+
+    setFeedback((prevFeedback) => {
+      const existingIndex = prevFeedback.findIndex(
+        (f) => f.id === latestFeedback.id
+      );
+
+      if (existingIndex >= 0) {
+        // Update existing feedback
+        const updated = [...prevFeedback];
+        updated[existingIndex] = latestFeedback;
+        return updated;
+      } else {
+        // Add new feedback, keep max 5 items
+        return [latestFeedback, ...prevFeedback.slice(0, 4)];
+      }
+    });
+
+    // Update stats if feedback is completed
+    if (
+      latestFeedback.processing_status === "completed" &&
+      latestFeedback.sentiment_analysis
+    ) {
+      setStats((prevStats) => {
+        if (!prevStats) return prevStats;
+
+        // Increment total and sentiment counts
+        const sentiment = latestFeedback.sentiment_analysis!.sentiment;
+        return {
+          ...prevStats,
+          total_feedback: prevStats.total_feedback + 1,
+          sentiment_breakdown: {
+            ...prevStats.sentiment_breakdown,
+            [sentiment]: (prevStats.sentiment_breakdown[sentiment] || 0) + 1,
+          },
+        };
+      });
+    }
+  }, [latestFeedback, loading]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -110,11 +122,9 @@ export default function Dashboard() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Statistics Overview - Fixed at top */}
       {stats && (
         <div className="flex-shrink-0 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Total Feedback */}
             <Card className="p-4 shadow-none">
               <div className="flex items-center justify-between">
                 <div>
@@ -127,7 +137,6 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            {/* Positive Sentiment */}
             <Card className="p-4 shadow-none">
               <div className="flex items-center justify-between">
                 <div>
@@ -142,7 +151,6 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            {/* Negative Sentiment */}
             <Card className="p-4 shadow-none">
               <div className="flex items-center justify-between">
                 <div>
@@ -160,12 +168,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Recent Feedback Title */}
       <div className="flex-shrink-0 mb-4">
         <h2 className="text-lg font-semibold">Recent Feedback</h2>
       </div>
 
-      {/* Recent Feedback - Scrollable */}
       <div className="flex-1 overflow-hidden">
         <div className="max-h-[500px] overflow-y-auto pr-2">
           <div className="space-y-2">
@@ -188,7 +194,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Refresh Button - Fixed at bottom */}
       <div className="flex-shrink-0 flex justify-center mt-4 pt-4">
         <Button onClick={loadDashboardData} variant="default">
           <RefreshCw className="mr-2 h-4 w-4" />

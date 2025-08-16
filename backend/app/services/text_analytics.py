@@ -1,7 +1,4 @@
-"""
-Azure Text Analytics service for sentiment analysis with opinion mining.
-Provides enhanced sentiment analysis with fallback capabilities.
-"""
+"""Azure Text Analytics service for sentiment analysis."""
 
 import os
 import logging
@@ -14,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class AzureTextAnalyticsService(BaseExternalService):
-    """Enhanced Azure Text Analytics service with opinion mining."""
     
     def __init__(self):
         super().__init__("Azure Text Analytics")

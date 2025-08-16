@@ -13,10 +13,32 @@ import os
 import logging
 import json
 import time
+import re
 
 logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__)
+
+def _is_valid_uuid(uuid_string):
+    """Validate UUID format."""
+    return re.match(r'^[0-9a-f-]{36}$', uuid_string) is not None
+
+def _error_response(message, code, status=400):
+    """Create standardized error response."""
+    return jsonify({
+        'status': 'error',
+        'message': message,
+        'code': code
+    }), status
+
+def _get_feedback_with_relations(feedback_id=None):
+    """Helper to get feedback with all related data."""
+    query = Feedback.query.options(
+        joinedload(Feedback.sentiment_analysis),
+        joinedload(Feedback.ai_response),
+        joinedload(Feedback.audio_file)
+    )
+    return query.get(feedback_id) if feedback_id else query
 
 def _build_complete_feedback_data(feedback):
     """Build complete feedback data including all related AI data for dashboard"""
@@ -115,27 +137,14 @@ def submit_feedback():
 def get_feedback(feedback_id):
     """Get a specific feedback record with all related data."""
     try:
-        # Validate feedback_id format (basic UUID validation)
-        if not feedback_id or len(feedback_id) != 36:
-            return jsonify({
-                'status': 'error',
-                'message': 'Invalid feedback ID format',
-                'code': 'INVALID_ID'
-            }), 400
+        # Validate UUID format
+        if not _is_valid_uuid(feedback_id):
+            return _error_response('Invalid feedback ID format', 'INVALID_ID')
         
-        # Use eager loading to prevent N+1 queries
-        feedback = Feedback.query.options(
-            joinedload(Feedback.sentiment_analysis),
-            joinedload(Feedback.ai_response),
-            joinedload(Feedback.audio_file)
-        ).get(feedback_id)
+        feedback = _get_feedback_with_relations(feedback_id)
         
         if not feedback:
-            return jsonify({
-                'status': 'error',
-                'message': 'Feedback not found',
-                'code': 'NOT_FOUND'
-            }), 404
+            return _error_response('Feedback not found', 'NOT_FOUND', 404)
         
         # Build complete response with all related data
         response_data = _build_complete_feedback_data(feedback)
@@ -169,11 +178,7 @@ def list_feedback():
         )
         
         # Build query with filters and eager loading
-        query = Feedback.query.options(
-            joinedload(Feedback.sentiment_analysis),
-            joinedload(Feedback.ai_response),
-            joinedload(Feedback.audio_file)
-        )
+        query = _get_feedback_with_relations()
         
         # Add category filter if provided and valid
         if category:
@@ -223,85 +228,42 @@ def list_feedback():
 def get_audio(audio_id):
     """Serve audio files from Blob Storage with secure access."""
     try:
-        # Validate audio_id format
-        if not audio_id or len(audio_id) != 36:
-            return jsonify({
-                'status': 'error',
-                'message': 'Invalid audio ID format',
-                'code': 'INVALID_ID'
-            }), 400
+        # Validate UUID format
+        if not _is_valid_uuid(audio_id):
+            return _error_response('Invalid audio ID format', 'INVALID_ID')
         
         audio_file = AudioFile.query.get(audio_id)
         
         if not audio_file:
-            return jsonify({
-                'status': 'error',
-                'message': 'Audio file not found',
-                'code': 'NOT_FOUND'
-            }), 404
+            return _error_response('Audio file not found', 'NOT_FOUND', 404)
         
         download = request.args.get('download', 'false').lower() == 'true'
+        filename = f'feedback_{audio_file.feedback_id}_response.mp3'
         
-        # Try to get audio URL from Blob Storage first
+        # Try Blob Storage first, fallback to local file
         from app.services.blob_storage import BlobStorageService
         blob_service = BlobStorageService()
         
         if blob_service.is_available:
-            # Get blob content and stream it with proper headers
             blob_result = blob_service.get_blob_content(audio_file.feedback_id)
-            
             if blob_result.success and blob_result.data:
-                logger.info(f"Serving audio from Blob Storage for audio {audio_id}")
-                
-                # Create response with proper headers for download
-                from flask import Response
-                response = Response(
+                return Response(
                     blob_result.data,
                     mimetype='audio/mpeg',
                     headers={
                         'Content-Length': str(len(blob_result.data)),
-                        'Accept-Ranges': 'bytes'
+                        'Content-Disposition': f'{"attachment" if download else "inline"}; filename="{filename}"'
                     }
                 )
-                
-                if download:
-                    response.headers['Content-Disposition'] = f'attachment; filename="feedback_{audio_file.feedback_id}_response.mp3"'
-                else:
-                    response.headers['Content-Disposition'] = 'inline'
-                
-                return response
-            else:
-                logger.warning(f"Failed to get blob content for audio {audio_id}")
-        
-        # Fallback: Try to serve from local file (development/legacy)
         if os.path.exists(audio_file.file_path):
-            logger.info(f"Serving audio file from local storage: {audio_file.file_path}")
-            
-            # Security check: ensure file is within expected directory
-            if os.environ.get('FLASK_ENV') == 'production':
-                audio_dir = os.path.abspath('/tmp/audio_files')
-            else:
-                audio_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'audio_files'))
-            
-            file_path = os.path.abspath(audio_file.file_path)
-            
-            if not file_path.startswith(audio_dir):
-                logger.warning(f"Security violation: attempted access to {file_path}")
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Access denied',
-                    'code': 'ACCESS_DENIED'
-                }), 403
-            
             return send_file(
                 audio_file.file_path,
                 as_attachment=download,
                 mimetype='audio/mpeg',
-                download_name=f'feedback_{audio_file.feedback_id}_response.mp3' if download else None
+                download_name=filename if download else None
             )
         
-        # If no file exists anywhere, try to regenerate
-        logger.warning(f"Audio file not found in storage for {audio_id}, attempting regeneration")
+        # Try to regenerate if not found
         
         try:
             feedback = Feedback.query.get(audio_file.feedback_id)
@@ -309,7 +271,6 @@ def get_audio(audio_id):
                 from app.services import FeedbackProcessor
                 processor = FeedbackProcessor()
                 
-                # Try to regenerate audio
                 audio_result = processor.speech_service.generate_emotion_aware_audio(
                     feedback.ai_response.response_text,
                     feedback.sentiment_analysis.to_dict(),
@@ -317,31 +278,24 @@ def get_audio(audio_id):
                 )
                 
                 if audio_result.success:
-                    # Try again to get the URL after regeneration
                     if blob_service.is_available:
                         sas_url = blob_service.get_audio_url(audio_file.feedback_id, download=download)
                         if sas_url:
-                            logger.info(f"Successfully regenerated and serving audio {audio_id}")
                             from flask import redirect
                             return redirect(sas_url)
                     
-                    # Or serve from local if blob failed but local file exists
                     if os.path.exists(audio_file.file_path):
                         return send_file(
                             audio_file.file_path,
                             as_attachment=download,
                             mimetype='audio/mpeg',
-                            download_name=f'feedback_{audio_file.feedback_id}_response.mp3' if download else None
+                            download_name=filename if download else None
                         )
         except Exception as regen_error:
             logger.error(f"Error regenerating audio: {str(regen_error)}")
         
         # If all else fails
-        return jsonify({
-            'status': 'error',
-            'message': 'Audio file not available - please try again later',
-            'code': 'FILE_NOT_AVAILABLE'
-        }), 404
+        return _error_response('Audio file not available - please try again later', 'FILE_NOT_AVAILABLE', 404)
         
     except Exception as e:
         logger.error(f"Error serving audio file {audio_id}: {str(e)}")
@@ -356,15 +310,12 @@ def dashboard_stats():
     try:
         from sqlalchemy import text
         
-        # Optimized approach: Use a single connection for all queries
-        # and fetch only necessary columns
-        
-        # Get total count (very fast single row query)
+        # Get total count
         total_feedback = db.session.execute(
             text("SELECT COUNT(*) as count FROM feedback")
         ).scalar() or 0
         
-        # Get sentiment breakdown in one efficient query
+        # Get sentiment breakdown
         sentiment_results = db.session.execute(
             text("""
                 SELECT s.sentiment, COUNT(*) as count
@@ -377,7 +328,7 @@ def dashboard_stats():
         
         sentiment_breakdown = {row.sentiment: row.count for row in sentiment_results}
         
-        # Get category breakdown (fast aggregation)
+        # Get category breakdown
         category_results = db.session.execute(
             text("""
                 SELECT COALESCE(category, 'uncategorized') as category, COUNT(*) as count
@@ -388,8 +339,7 @@ def dashboard_stats():
         
         category_breakdown = {row.category: row.count for row in category_results}
         
-        # Get recent feedback with minimal data - only load what's displayed
-        # Use a targeted query with specific columns instead of full ORM objects
+        # Get recent feedback with minimal data
         recent_sql = text("""
             SELECT 
                 f.id, f.text, f.category, f.created_at, f.processing_status,
@@ -406,7 +356,7 @@ def dashboard_stats():
         
         recent_results = db.session.execute(recent_sql).fetchall()
         
-        # Build lightweight response with only necessary data
+        # Build response data
         recent_feedback_data = []
         for row in recent_results:
             # Handle created_at - it might be a string from SQLite
@@ -461,16 +411,9 @@ def sse_stream():
     
     def event_generator():
         try:
-            # Send initial connection event
             yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE connection established'})}\n\n"
-            
-            # Stream events from the client
             for event in client.get_events():
                 yield event
-                
-        except GeneratorExit:
-            # Client disconnected
-            client.disconnect()
         except Exception as e:
             logger.error(f"SSE stream error: {str(e)}")
             client.disconnect()

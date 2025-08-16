@@ -1,11 +1,8 @@
-"""
-Base service classes providing common functionality for external services.
-Implements retry logic, error handling, and service validation patterns.
-"""
+"""Base service classes."""
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from functools import wraps
 import time
 
@@ -13,10 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseExternalService(ABC):
-    """
-    Abstract base class for external service integrations.
-    Provides common patterns for service initialization and validation.
-    """
     
     def __init__(self, service_name: str):
         self.service_name = service_name
@@ -48,13 +41,7 @@ class BaseExternalService(ABC):
 
 
 def retry_on_failure(max_retries: int = 2, delay: float = 1.0):
-    """
-    Decorator to retry operations on failure with exponential backoff.
-    
-    Args:
-        max_retries: Maximum number of retry attempts
-        delay: Initial delay between retries in seconds
-    """
+    """Decorator to retry operations on failure with exponential backoff."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -78,7 +65,6 @@ def retry_on_failure(max_retries: int = 2, delay: float = 1.0):
 
 
 class ServiceResponse:
-    """Standardized response wrapper for service operations."""
     
     def __init__(self, success: bool, data: Any = None, error: str = None, service_used: str = None):
         self.success = success

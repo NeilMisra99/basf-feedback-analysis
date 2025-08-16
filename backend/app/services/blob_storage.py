@@ -1,7 +1,4 @@
-"""
-Azure Blob Storage service for managing audio files.
-Provides secure, persistent storage for generated audio files.
-"""
+"""Azure Blob Storage service for managing audio files."""
 
 import os
 import logging
@@ -14,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class BlobStorageService(BaseExternalService):
-    """Azure Blob Storage service for audio file management."""
     
     def __init__(self):
         super().__init__("Azure Blob Storage")

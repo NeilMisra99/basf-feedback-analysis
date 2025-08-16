@@ -1,14 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { memo } from "react";
 
-// Optimized skeleton components for different loading states
 
-export const FeedbackCardSkeleton = memo(() => (
+export const FeedbackCardSkeleton = () => (
   <div className="transition-colors rounded-lg shadow-none border">
     <div className="px-4 py-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* Header with category, status and date */}
           <div className="flex items-center gap-2 mb-2">
             <Skeleton className="h-5 w-16 rounded-full" />
             <Skeleton className="h-5 w-20 rounded-full" />
@@ -18,7 +15,6 @@ export const FeedbackCardSkeleton = memo(() => (
             </div>
           </div>
 
-          {/* Feedback text */}
           <div className="mb-2">
             <div className="space-y-1">
               <Skeleton className="h-4 w-full" />
@@ -27,7 +23,6 @@ export const FeedbackCardSkeleton = memo(() => (
             </div>
           </div>
 
-          {/* Sentiment badge */}
           <div className="flex items-center gap-2 mb-2">
             <div className="flex items-center gap-1">
               <Skeleton className="h-4 w-4" />
@@ -36,7 +31,6 @@ export const FeedbackCardSkeleton = memo(() => (
             <Skeleton className="h-3 w-20" />
           </div>
 
-          {/* AI Response area */}
           <div className="rounded-lg p-2 bg-gray-50">
             <Skeleton className="h-4 w-20 mb-1" />
             <div className="space-y-1">
@@ -46,18 +40,15 @@ export const FeedbackCardSkeleton = memo(() => (
           </div>
         </div>
 
-        {/* Audio button */}
         <div className="flex-shrink-0">
           <Skeleton className="h-8 w-16 rounded-md" />
         </div>
       </div>
     </div>
   </div>
-));
+);
 
-FeedbackCardSkeleton.displayName = "FeedbackCardSkeleton";
-
-export const StatCardSkeleton = memo(() => (
+export const StatCardSkeleton = () => (
   <div className="p-4 border rounded-lg bg-white shadow-none">
     <div className="flex items-center justify-between">
       <div>
@@ -67,12 +58,9 @@ export const StatCardSkeleton = memo(() => (
       <Skeleton className="h-5 w-5" />
     </div>
   </div>
-));
+);
 
-StatCardSkeleton.displayName = "StatCardSkeleton";
-
-// Specific stat card skeletons for different metrics
-export const TotalFeedbackSkeleton = memo(() => (
+export const TotalFeedbackSkeleton = () => (
   <div className="p-4 border rounded-lg bg-white shadow-none">
     <div className="flex items-center justify-between">
       <div>
@@ -82,9 +70,9 @@ export const TotalFeedbackSkeleton = memo(() => (
       <Skeleton className="h-5 w-5" />
     </div>
   </div>
-));
+);
 
-export const SentimentBreakdownSkeleton = memo(() => (
+export const SentimentBreakdownSkeleton = () => (
   <div className="p-6 border rounded-lg bg-white shadow-sm">
     <div className="flex items-center justify-between mb-3">
       <Skeleton className="h-4 w-32" />
@@ -114,9 +102,9 @@ export const SentimentBreakdownSkeleton = memo(() => (
       </div>
     </div>
   </div>
-));
+);
 
-export const CategoryBreakdownSkeleton = memo(() => (
+export const CategoryBreakdownSkeleton = () => (
   <div className="p-6 border rounded-lg bg-white shadow-sm">
     <div className="flex items-center justify-between mb-3">
       <Skeleton className="h-4 w-30" />
@@ -137,11 +125,10 @@ export const CategoryBreakdownSkeleton = memo(() => (
       </div>
     </div>
   </div>
-));
+);
 
-export const DashboardSkeleton = memo(() => (
+export const DashboardSkeleton = () => (
   <div className="bg-white p-8 rounded-2xl shadow-sm border h-full flex flex-col">
-    {/* Statistics Overview Skeleton - Fixed at top */}
     <div className="flex-shrink-0 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <TotalFeedbackSkeleton />
@@ -151,12 +138,10 @@ export const DashboardSkeleton = memo(() => (
       </div>
     </div>
 
-    {/* Recent Feedback Title Skeleton */}
     <div className="flex-shrink-0 mb-4">
       <Skeleton className="h-6 w-36" />
     </div>
 
-    {/* Recent Feedback Skeleton - Scrollable */}
     <div className="flex-1 overflow-hidden">
       <div className="max-h-[500px] overflow-y-auto pr-2">
         <div className="space-y-3">
@@ -167,62 +152,46 @@ export const DashboardSkeleton = memo(() => (
       </div>
     </div>
 
-    {/* Refresh Button Skeleton - Fixed at bottom */}
     <div className="flex-shrink-0 flex justify-center mt-6 pt-4">
       <div className="bg-gray-50 rounded-md p-2 shadow-sm border">
         <Skeleton className="h-9 w-24" />
       </div>
     </div>
   </div>
-));
+);
 
-DashboardSkeleton.displayName = "DashboardSkeleton";
-
-export const FeedbackFormSkeleton = memo(() => (
+export const FeedbackFormSkeleton = () => (
   <div className="max-w-2xl mx-auto">
     <div className="border rounded-lg bg-white shadow-none">
-      {/* Card Header */}
       <div className="flex flex-col space-y-1.5 p-6">
-        <Skeleton className="h-6 w-44" /> {/* "Submit Your Feedback" */}
+        <Skeleton className="h-6 w-44" />
       </div>
 
-      {/* Card Content */}
       <div className="p-6 pt-0">
         <div className="space-y-6">
-          {/* Category Selection Field */}
           <div className="space-y-2">
-            <Skeleton className="h-4 w-16" /> {/* "Category" label */}
-            <Skeleton className="h-10 w-full rounded-md" />{" "}
-            {/* Select trigger */}
-            {/* Optional error message space */}
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full rounded-md" />
             <Skeleton className="h-0 w-0" />
           </div>
 
-          {/* Feedback Text Field */}
           <div className="space-y-2">
-            <Skeleton className="h-4 w-24" /> {/* "Your Feedback" label */}
-            <Skeleton className="h-32 w-full rounded-md" />{" "}
-            {/* Textarea (6 rows) */}
-            {/* Optional error message space */}
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-32 w-full rounded-md" />
             <Skeleton className="h-0 w-0" />
           </div>
 
-          {/* Submit Button */}
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
       </div>
     </div>
   </div>
-));
+);
 
-FeedbackFormSkeleton.displayName = "FeedbackFormSkeleton";
-
-export const ComponentLoader = memo(() => (
+export const ComponentLoader = () => (
   <div className="space-y-4">
     <Skeleton className="h-8 w-48" />
     <Skeleton className="h-32 w-full" />
     <Skeleton className="h-10 w-24" />
   </div>
-));
-
-ComponentLoader.displayName = "ComponentLoader";
+);

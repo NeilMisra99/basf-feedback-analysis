@@ -1,14 +1,10 @@
-"""
-Production-ready configuration management for the feedback analysis application.
-Implements secure configuration handling with environment validation.
-"""
+"""Application configuration."""
 
 import os
 from typing import Dict, Any
 
 
 class Config:
-    """Base configuration class with security-focused defaults."""
     
     # Database Configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///feedback_analysis.db')
@@ -41,10 +37,7 @@ class Config:
     
     @classmethod
     def validate_config(cls) -> Dict[str, Any]:
-        """
-        Validate critical configuration and return status.
-        Returns validation results for monitoring/debugging.
-        """
+        """Validate critical configuration and return status."""
         validation_results = {
             'secret_key': bool(cls.SECRET_KEY),
             'database_configured': bool(cls.SQLALCHEMY_DATABASE_URI),
@@ -61,13 +54,11 @@ class Config:
 
 
 class DevelopmentConfig(Config):
-    """Development configuration with debug features enabled."""
     DEBUG = True
     TESTING = False
 
 
 class ProductionConfig(Config):
-    """Production configuration with security hardening."""
     DEBUG = False
     TESTING = False
     
@@ -78,7 +69,6 @@ class ProductionConfig(Config):
 
 
 class TestingConfig(Config):
-    """Testing configuration with test-specific settings."""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     SECRET_KEY = 'test-secret-key'

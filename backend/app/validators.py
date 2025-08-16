@@ -1,7 +1,4 @@
-"""
-Input validation utilities for the feedback analysis application.
-Provides comprehensive validation with clear error messages.
-"""
+"""Input validation utilities."""
 
 import re
 from typing import Dict, Any, List, Optional, Tuple
@@ -10,7 +7,6 @@ from flask import request, jsonify
 
 
 class ValidationError(Exception):
-    """Custom exception for validation errors."""
     
     def __init__(self, message: str, field: str = None, code: str = None):
         self.message = message
@@ -20,7 +16,6 @@ class ValidationError(Exception):
 
 
 class FeedbackValidator:
-    """Validator for feedback-related input data."""
     
     # Configuration constants
     MIN_TEXT_LENGTH = 10
@@ -29,18 +24,7 @@ class FeedbackValidator:
     
     @classmethod
     def validate_feedback_submission(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate feedback submission data.
-        
-        Args:
-            data: Request data dictionary
-            
-        Returns:
-            Dict with validated and sanitized data
-            
-        Raises:
-            ValidationError: If validation fails
-        """
+        """Validate feedback submission data."""
         if not data:
             raise ValidationError("Request body is required", code="MISSING_BODY")
         
@@ -114,47 +98,22 @@ class FeedbackValidator:
     @classmethod
     def _contains_suspicious_content(cls, text: str) -> bool:
         """Check for potentially malicious or inappropriate content."""
-        # Basic patterns for suspicious content
-        suspicious_patterns = [
-            r'<script[^>]*>.*?</script>',  # Script tags
-            r'javascript:',  # JavaScript URLs
-            r'data:.*base64',  # Base64 data URLs
-            r'<iframe[^>]*>',  # Iframe tags
-            r'<object[^>]*>',  # Object tags
-            r'<embed[^>]*>',  # Embed tags
-        ]
-        
-        text_lower = text.lower()
-        for pattern in suspicious_patterns:
-            if re.search(pattern, text_lower, re.IGNORECASE | re.DOTALL):
-                return True
-        
-        return False
+        suspicious_pattern = r'<(script|iframe|object|embed)[^>]*>|javascript:|data:.*base64'
+        return bool(re.search(suspicious_pattern, text, re.IGNORECASE))
 
 
 class QueryValidator:
-    """Validator for query parameters."""
     
     @classmethod
     def validate_pagination(cls, page: Any, per_page: Any) -> Tuple[int, int]:
-        """
-        Validate pagination parameters.
-        
-        Returns:
-            Tuple of (page, per_page) with validated values
-        """
-        # Validate page
+        """Validate pagination parameters."""
         try:
-            page = int(page) if page is not None else 1
-            if page < 1:
-                page = 1
+            page = max(1, int(page)) if page else 1
         except (ValueError, TypeError):
             page = 1
         
-        # Validate per_page
         try:
-            per_page = int(per_page) if per_page is not None else 10
-            per_page = max(1, min(per_page, 100))  # Clamp between 1 and 100
+            per_page = max(1, min(int(per_page), 100)) if per_page else 10
         except (ValueError, TypeError):
             per_page = 10
         
@@ -174,12 +133,7 @@ class QueryValidator:
 
 
 def validate_json_request(validator_func):
-    """
-    Decorator to validate JSON request data using a validator function.
-    
-    Args:
-        validator_func: Function that takes request data and returns validated data
-    """
+    """Decorator to validate JSON request data using a validator function."""
     def decorator(route_func):
         @wraps(route_func)
         def wrapper(*args, **kwargs):

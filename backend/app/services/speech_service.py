@@ -1,7 +1,4 @@
-"""
-Azure Speech service for generating emotion-aware audio responses.
-Provides SSML-based audio synthesis with emotional expression.
-"""
+"""Azure Speech service for generating emotion-aware audio responses."""
 
 import os
 import logging
@@ -14,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class AzureSpeechService(BaseExternalService):
-    """Enhanced Azure Speech service with SSML emotion adaptation."""
     
     def __init__(self):
         super().__init__("Azure Speech")

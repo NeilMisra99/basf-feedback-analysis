@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { feedbackAPI } from "../services/api";
+import { getErrorMessageWithFallback } from "../lib/errorUtils";
 
 const formSchema = z.object({
   category: z.string().min(1, {
@@ -71,16 +72,9 @@ export default function FeedbackForm() {
         throw new Error(response.message || "Failed to submit feedback");
       }
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" && error !== null && "message" in error
-            ? String((error as { message: unknown }).message)
-            : "Failed to submit feedback. Please try again.";
-
       setSubmitMessage({
         type: "error",
-        text: errorMessage,
+        text: getErrorMessageWithFallback(error, "Failed to submit feedback. Please try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -96,7 +90,6 @@ export default function FeedbackForm() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Category Selection */}
               <FormField
                 control={form.control}
                 name="category"
@@ -121,7 +114,6 @@ export default function FeedbackForm() {
                 )}
               />
 
-              {/* Feedback Text */}
               <FormField
                 control={form.control}
                 name="text"
@@ -141,7 +133,6 @@ export default function FeedbackForm() {
                 )}
               />
 
-              {/* Submit Button */}
               <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting ? (
                   <>
@@ -153,7 +144,6 @@ export default function FeedbackForm() {
                 )}
               </Button>
 
-              {/* Success/Error Message */}
               {submitMessage && (
                 <div
                   className={`p-4 rounded-md border ${

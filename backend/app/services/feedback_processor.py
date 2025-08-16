@@ -1,7 +1,4 @@
-"""
-Main feedback processor that orchestrates the complete analysis pipeline.
-Coordinates sentiment analysis, response generation, and audio synthesis.
-"""
+"""Main feedback processor."""
 
 import logging
 from typing import Optional
@@ -15,30 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackProcessor:
-    """
-    Main processor that orchestrates the complete feedback analysis pipeline.
-    Implements a clean separation of concerns with proper error handling.
-    """
     
     def __init__(self):
-        """Initialize all service components."""
         self.text_analytics = AzureTextAnalyticsService()
         self.openai_service = OpenAIResponseService()
         self.speech_service = AzureSpeechService()
     
     def process_feedback_complete(self, feedback_id: str) -> bool:
-        """
-        Process feedback through the complete enhanced pipeline:
-        1. Enhanced sentiment analysis with opinion mining
-        2. Context-aware AI response generation
-        3. Emotion-based audio synthesis with SSML
-        
-        Args:
-            feedback_id: The ID of the feedback to process
-            
-        Returns:
-            bool: True if processing completed successfully, False otherwise
-        """
+        """Process feedback through the complete pipeline."""
         try:
             # Get feedback from database
             feedback = Feedback.query.get(feedback_id)
@@ -46,29 +27,26 @@ class FeedbackProcessor:
                 logger.error(f"Feedback {feedback_id} not found")
                 return False
             
-            logger.info(f"Starting enhanced processing for feedback {feedback_id}")
-            
-            # Step 1: Enhanced Sentiment Analysis
+            # Step 1: Sentiment Analysis
             sentiment_result = self._process_sentiment_analysis(feedback)
             if not sentiment_result:
                 logger.error(f"Sentiment analysis failed for feedback {feedback_id}")
                 return False
             
-            # Step 2: Generate Contextual AI Response
+            # Step 2: AI Response Generation
             response_result = self._process_ai_response(feedback, sentiment_result.data)
             if not response_result:
                 logger.error(f"AI response generation failed for feedback {feedback_id}")
                 return False
             
-            # Step 3: Generate Emotion-Aware Audio (optional)
-            audio_result = self._process_audio_generation(feedback, sentiment_result.data, response_result.data)
-            # Audio generation failure is not critical - log but continue
+            # Step 3: Audio Generation (optional)
+            self._process_audio_generation(feedback, sentiment_result.data, response_result.data)
             
-            logger.info(f"Enhanced processing completed for feedback {feedback_id}")
+            logger.info(f"Processing completed for feedback {feedback_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Error in enhanced processing for feedback {feedback_id}: {str(e)}")
+            logger.error(f"Error processing feedback {feedback_id}: {str(e)}")
             db.session.rollback()
             return False
     
