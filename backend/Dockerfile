@@ -34,5 +34,5 @@ ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 
 
-# Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "120", "application:app"]
+# Use gunicorn for production with thread-based workers to support SSE streaming
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--worker-class", "gthread", "--threads", "8", "--timeout", "120", "application:app"]

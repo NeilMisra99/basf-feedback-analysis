@@ -33,13 +33,17 @@ class SSEService {
       return;
     }
 
-    console.log(`[SSE] Connecting to ${this.apiUrl}/events`);
+    if (import.meta.env.DEV) {
+      console.log(`[SSE] Connecting to ${this.apiUrl}/events`);
+    }
 
     try {
       this.eventSource = new EventSource(`${this.apiUrl}/events`);
 
       this.eventSource.onopen = () => {
-        console.log("[SSE] Connection opened successfully");
+        if (import.meta.env.DEV) {
+          console.log("[SSE] Connection opened successfully");
+        }
         this.isConnected = true;
         this.reconnectAttempts = 0;
       };
@@ -47,7 +51,9 @@ class SSEService {
       this.eventSource.onmessage = (event) => {
         try {
           const data: SSEEvent = JSON.parse(event.data);
-          console.log("[SSE] Received event:", data.type, data);
+          if (import.meta.env.DEV) {
+            console.log("[SSE] Received event:", data.type, data);
+          }
 
           this.eventHandlers.forEach((handler) => {
             try {
@@ -57,12 +63,16 @@ class SSEService {
             }
           });
         } catch (error) {
-          console.error("[SSE] Error parsing data:", error, event.data);
+          if (import.meta.env.DEV) {
+            console.error("[SSE] Error parsing data:", error, event.data);
+          }
         }
       };
 
       this.eventSource.onerror = (error) => {
-        console.error("[SSE] Connection error:", error);
+        if (import.meta.env.DEV) {
+          console.error("[SSE] Connection error:", error);
+        }
         this.isConnected = false;
 
         // Attempt to reconnect

@@ -32,9 +32,6 @@ export default function Dashboard() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   // Real-time updates
-  const [, setStatsProcessedIds] = useState<Set<string>>(
-    new Set()
-  );
   const { latestFeedback, refreshTrigger } = useFeedback();
 
   const loadDashboardStats = async () => {
@@ -90,7 +87,6 @@ export default function Dashboard() {
   const handleRefresh = () => {
     loadDashboardStats();
     loadFeedback(currentPage);
-    setStatsProcessedIds(new Set());
   };
 
   // Load data on mount and refresh
@@ -107,7 +103,9 @@ export default function Dashboard() {
 
     // Always update the feedback list with the latest data
     setFeedback((prevFeedback) => {
-      const existingIndex = prevFeedback.findIndex(f => f.id === latestFeedback.id);
+      const existingIndex = prevFeedback.findIndex(
+        (f) => f.id === latestFeedback.id
+      );
       if (existingIndex >= 0) {
         // Update existing feedback item with latest status
         const updatedFeedback = [...prevFeedback];
@@ -119,35 +117,9 @@ export default function Dashboard() {
       }
     });
 
-    // Update stats only once when feedback completes
-    if (latestFeedback.processing_status === "completed" && latestFeedback.sentiment_analysis) {
-      setStatsProcessedIds((prevIds) => {
-        // Check if we've already processed this feedback for stats
-        if (prevIds.has(latestFeedback.id)) {
-          return prevIds;
-        }
-        
-        // Mark as processed
-        const newIds = new Set(prevIds);
-        newIds.add(latestFeedback.id);
-        
-        // Update stats
-        setStats((prevStats) => {
-          if (!prevStats) return prevStats;
-          
-          const sentiment = latestFeedback.sentiment_analysis!.sentiment;
-          return {
-            ...prevStats,
-            total_feedback: prevStats.total_feedback + 1,
-            sentiment_breakdown: {
-              ...prevStats.sentiment_breakdown,
-              [sentiment]: (prevStats.sentiment_breakdown[sentiment] || 0) + 1,
-            },
-          };
-        });
-        
-        return newIds;
-      });
+    // On completion, refresh stats from server to avoid client-side drift
+    if (latestFeedback.processing_status === "completed") {
+      loadDashboardStats();
     }
   }, [latestFeedback]);
 
@@ -237,7 +209,8 @@ export default function Dashboard() {
         <div>
           <h2 className="text-lg font-semibold">All Feedback</h2>
           <p className="text-sm text-muted-foreground">
-            {pagination && pagination.total > 0 &&
+            {pagination &&
+              pagination.total > 0 &&
               `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
           </p>
         </div>

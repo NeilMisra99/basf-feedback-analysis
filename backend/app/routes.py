@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file, Response
+from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
 from sqlalchemy.orm import joinedload
 from app import db
 from app.models import Feedback, AudioFile
@@ -420,7 +420,7 @@ def sse_stream():
             client.disconnect()
     
     return Response(
-        event_generator(),
+        stream_with_context(event_generator()),
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache, no-transform',
