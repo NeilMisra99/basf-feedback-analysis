@@ -217,7 +217,7 @@ Create a **new resource group** for hosting your application (your AI services a
    - **Container app name**: `basf-feedback-api`
    - **Environment**: Use existing `basf-feedback-env`
    - **Container image**: Use quickstart image initially (we'll update via GitHub Actions)
-   - **Ingress**: Enabled, HTTP traffic from anywhere, Target port: 5001
+   - **Ingress**: Enabled, HTTP traffic from anywhere, Target port: 8080
 
 **Create Static Web App (Frontend):**
 

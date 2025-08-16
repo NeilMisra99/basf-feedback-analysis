@@ -25,8 +25,8 @@ COPY . .
 # Create directory for temporary audio files
 RUN mkdir -p /tmp/audio_files
 
-# Expose port 80
-EXPOSE 80
+# Expose port 8080
+EXPOSE 8080
 
 # Set environment variables
 ENV FLASK_APP=application.py
@@ -34,4 +34,4 @@ ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 
 # Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "2", "--timeout", "120", "application:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "120", "application:app"]
