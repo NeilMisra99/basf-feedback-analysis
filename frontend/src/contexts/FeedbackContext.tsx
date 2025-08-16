@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { sseService, type SSEEvent } from '../services/sseService';
-import type { Feedback } from '../types';
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { sseService, type SSEEvent } from "../services/sseService";
+import type { Feedback } from "../types";
 
 interface FeedbackContextType {
   latestFeedback: Feedback | null;
@@ -9,14 +9,16 @@ interface FeedbackContextType {
   refreshTrigger: number;
 }
 
-const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
+const FeedbackContext = createContext<FeedbackContextType | undefined>(
+  undefined
+);
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [latestFeedback, setLatestFeedback] = useState<Feedback | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const triggerRefresh = () => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   useEffect(() => {
@@ -30,10 +32,9 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           }
           break;
         case "connected":
-          console.log("SSE connected");
           break;
         case "heartbeat":
-          // SSE connection is alive
+          // SSE connection is alive - don't log to reduce noise
           break;
       }
     };
@@ -50,7 +51,9 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <FeedbackContext.Provider value={{ latestFeedback, triggerRefresh, refreshTrigger }}>
+    <FeedbackContext.Provider
+      value={{ latestFeedback, triggerRefresh, refreshTrigger }}
+    >
       {children}
     </FeedbackContext.Provider>
   );
@@ -59,7 +62,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 export function useFeedback() {
   const context = useContext(FeedbackContext);
   if (context === undefined) {
-    throw new Error('useFeedback must be used within a FeedbackProvider');
+    throw new Error("useFeedback must be used within a FeedbackProvider");
   }
   return context;
 }

@@ -103,10 +103,7 @@ export default function Dashboard() {
 
   // Handle real-time feedback updates via SSE
   useEffect(() => {
-    if (!latestFeedback || processedFeedbackIds.has(latestFeedback.id)) return;
-
-    // Mark this feedback as processed to avoid duplicates
-    setProcessedFeedbackIds((prev) => new Set(prev).add(latestFeedback.id));
+    if (!latestFeedback) return;
 
     // Update the feedback list with the latest status
     setFeedback((prevFeedback) => {
@@ -118,16 +115,23 @@ export default function Dashboard() {
         return updatedFeedback;
       } else {
         // Add new feedback item at the beginning (for new submissions)
-        return [latestFeedback, ...prevFeedback];
+        // Only add if not already processed to avoid duplicates
+        if (!processedFeedbackIds.has(latestFeedback.id)) {
+          setProcessedFeedbackIds((prev) => new Set(prev).add(latestFeedback.id));
+          return [latestFeedback, ...prevFeedback];
+        }
+        return prevFeedback;
       }
     });
 
-    // Update stats if we have them and feedback is completed
+    // Update stats only for newly completed feedback
     if (
       latestFeedback.processing_status === "completed" &&
       latestFeedback.sentiment_analysis &&
-      stats
+      stats &&
+      !processedFeedbackIds.has(latestFeedback.id)
     ) {
+      setProcessedFeedbackIds((prev) => new Set(prev).add(latestFeedback.id));
       setStats((prevStats) => {
         if (!prevStats) return prevStats;
 

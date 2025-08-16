@@ -65,11 +65,6 @@ class SSEService {
         console.error("[SSE] Connection error:", error);
         this.isConnected = false;
 
-        // Check if this is a normal close or an actual error
-        if (this.eventSource?.readyState === EventSource.CLOSED) {
-          console.log("[SSE] Connection closed, attempting reconnect...");
-        }
-
         // Attempt to reconnect
         this.handleReconnect();
       };
@@ -120,9 +115,10 @@ class SSEService {
     }
 
     this.reconnectAttempts++;
-    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000); // Cap at 30 seconds
-
-    console.log(`[SSE] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+      30000
+    ); // Cap at 30 seconds
 
     setTimeout(() => {
       this.disconnect(); // Clean up before reconnecting
