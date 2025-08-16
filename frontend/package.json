@@ -10,9 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "dev:backend": "cd ../backend && python run.py",
-    "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\" --names \"frontend,backend\" --prefix-colors \"cyan,yellow\""
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

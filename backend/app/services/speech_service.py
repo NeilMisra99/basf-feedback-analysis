@@ -33,7 +33,7 @@ class AzureSpeechService(BaseExternalService):
                 region=self.speech_region
             )
             # Set default voice
-            self.speech_config.speech_synthesis_voice_name = "en-US-JennyMultilingualNeural"
+            self.speech_config.speech_synthesis_voice_name = "en-US-AriaNeural"
             return True
         except Exception as e:
             logger.error(f"Failed to initialize Azure Speech client: {str(e)}")
@@ -114,6 +114,7 @@ class AzureSpeechService(BaseExternalService):
         voice = self._get_voice_for_sentiment(sentiment, confidence)
         style = self._get_emotion_style(sentiment, confidence)
         style_degree = self._get_style_degree(confidence)
+        prosody_settings = self._get_prosody_for_sentiment(sentiment, confidence)
         
         # Build SSML with emotion expression
         ssml = f"""
@@ -121,7 +122,7 @@ class AzureSpeechService(BaseExternalService):
                xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
             <voice name="{voice}">
                 <mstts:express-as style="{style}" styledegree="{style_degree}">
-                    <prosody rate="medium" pitch="medium">
+                    <prosody rate="{prosody_settings['rate']}" pitch="{prosody_settings['pitch']}">
                         {self._escape_ssml_text(text)}
                     </prosody>
                 </mstts:express-as>
@@ -132,31 +133,59 @@ class AzureSpeechService(BaseExternalService):
         return ssml.strip()
     
     def _get_voice_for_sentiment(self, sentiment: str, confidence: float) -> str:
-        """Select appropriate voice based on sentiment."""
+        """Select appropriate voice based on sentiment with proper voice names."""
         voice_mapping = {
-            'positive': 'en-US-JennyMultilingualNeural',  # Warm, friendly
-            'negative': 'en-US-RyanMultilingualNeural',   # Professional, empathetic
-            'neutral': 'en-US-AvaMultilingualNeural'      # Balanced, professional
+            'positive': 'en-US-JennyNeural',    # Supports: cheerful, excited, friendly, hopeful
+            'negative': 'en-US-AriaNeural',     # Using AriaNeural for negative to avoid slowness
+            'mixed': 'en-US-GuyNeural',         # Male voice for mixed sentiment - professional balance
+            'neutral': 'en-US-AriaNeural'       # Supports: assistant, chat, newscast
         }
         return voice_mapping.get(sentiment, voice_mapping['neutral'])
     
     def _get_emotion_style(self, sentiment: str, confidence: float) -> str:
-        """Get emotion style based on sentiment and confidence."""
+        """Get emotion style based on sentiment and confidence using supported styles."""
         if sentiment == 'positive':
-            return 'cheerful' if confidence > 0.7 else 'friendly'
+            # JennyNeural supports: cheerful, excited, friendly, hopeful
+            return 'excited' if confidence > 0.8 else 'cheerful' if confidence > 0.6 else 'friendly'
         elif sentiment == 'negative':
-            return 'empathetic' if confidence > 0.7 else 'calm'
+            # AriaNeural supports multiple negative emotion styles based on confidence
+            if confidence > 0.8:
+                return 'sad'  # Strong negative emotion
+            elif confidence > 0.6:
+                return 'empathetic'  # Understanding and caring
+            else:
+                return 'calm'  # Gentle, composed response to mild negativity
+        elif sentiment == 'mixed':
+            # Mixed sentiment with GuyNeural - using supported styles for balanced approach
+            if confidence > 0.7:
+                return 'newscast'  # High confidence mixed - professional, balanced tone
+            elif confidence > 0.5:
+                return 'friendly'  # Medium confidence mixed - approachable, engaging
+            else:
+                return 'hopeful'  # Low confidence mixed - optimistic, adaptable
         else:
-            return 'assistant'  # Professional default
+            # Neutral sentiment - AriaNeural supports multiple neutral styles
+            if confidence > 0.7:
+                return 'narration-professional'  # High confidence neutral - professional tone
+            elif confidence > 0.5:
+                return 'assistant'  # Medium confidence neutral - helpful tone
+            else:
+                return 'chat'  # Low confidence neutral - casual, conversational tone
     
     def _get_style_degree(self, confidence: float) -> str:
         """Get style intensity based on confidence level."""
-        if confidence > 0.8:
-            return "1.5"  # Strong emotion
-        elif confidence > 0.6:
+        if confidence > 0.9:
+            return "1.3"  # Strong but controlled emotion
+        elif confidence > 0.7:
             return "1.2"  # Moderate emotion
+        elif confidence > 0.5:
+            return "1.1"  # Slight emotion
         else:
-            return "1.0"  # Subtle emotion
+            return "1.0"  # Neutral emotion
+    
+    def _get_prosody_for_sentiment(self, sentiment: str, confidence: float) -> dict:
+        """Get prosody settings - keeping it simple with just medium rate for all."""
+        return {'rate': 'medium', 'pitch': 'medium'}
     
     def _escape_ssml_text(self, text: str) -> str:
         """Escape special characters in SSML."""

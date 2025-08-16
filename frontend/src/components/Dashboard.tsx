@@ -5,9 +5,11 @@ import {
   MessageSquare,
   TrendingUp,
   TrendingDown,
+  Minus,
   RefreshCw,
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
+import { sseService, type SSEEvent } from "../services/sseService";
 import type { Feedback, DashboardStats } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import { DashboardSkeleton } from "./ui/loading";
@@ -50,6 +52,52 @@ function Dashboard() {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  // Setup SSE connection for real-time updates
+  useEffect(() => {
+    const handleSSEEvent = (event: SSEEvent) => {
+      switch (event.type) {
+        case 'feedback_update':
+          if (event.data) {
+            setFeedback(prevFeedback => {
+              const existingIndex = prevFeedback.findIndex(f => f.id === event.data!.id);
+              
+              if (existingIndex >= 0) {
+                // Update existing feedback
+                const updated = [...prevFeedback];
+                updated[existingIndex] = event.data!;
+                return updated;
+              } else {
+                // Add new feedback (insert at beginning to maintain chronological order)
+                return [event.data!, ...prevFeedback.slice(0, 4)]; // Keep only 5 most recent
+              }
+            });
+
+            // Update stats if needed
+            if (event.data.processing_status === 'completed') {
+              // Refresh stats when feedback processing completes
+              loadDashboardData();
+            }
+          }
+          break;
+        case 'connected':
+          break;
+        case 'heartbeat':
+          // SSE connection is alive
+          break;
+      }
+    };
+
+    // Connect to SSE and add event listener
+    sseService.connect();
+    const removeListener = sseService.addEventListener(handleSSEEvent);
+
+    // Cleanup on unmount
+    return () => {
+      removeListener();
+      sseService.disconnect();
+    };
+  }, [loadDashboardData]);
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -79,7 +127,7 @@ function Dashboard() {
       {/* Statistics Overview - Fixed at top */}
       {stats && (
         <div className="flex-shrink-0 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Feedback */}
             <Card className="p-4 shadow-none">
               <div className="flex items-center justify-between">
@@ -120,6 +168,21 @@ function Dashboard() {
                   </p>
                 </div>
                 <TrendingDown className="h-5 w-5 text-red-600" />
+              </div>
+            </Card>
+
+            {/* Mixed Sentiment */}
+            <Card className="p-4 shadow-none">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Mixed
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {stats.sentiment_breakdown.mixed || 0}
+                  </p>
+                </div>
+                <Minus className="h-5 w-5 text-yellow-600" />
               </div>
             </Card>
           </div>

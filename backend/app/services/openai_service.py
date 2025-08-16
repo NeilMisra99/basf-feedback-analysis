@@ -133,6 +133,7 @@ class OpenAIResponseService(BaseExternalService):
         responses = {
             'positive': "Thank you so much for your wonderful feedback! We're thrilled to hear about your positive experience and truly appreciate you taking the time to share it with us.",
             'negative': "We sincerely appreciate you bringing this to our attention and apologize for any inconvenience you've experienced. Your feedback is invaluable in helping us improve our service.",
+            'mixed': "Thank you for your detailed feedback. We appreciate both the positive aspects you've highlighted and the areas for improvement you've identified. This balanced perspective helps us understand how to better serve our customers.",
             'neutral': "Thank you for your feedback. We appreciate you taking the time to share your thoughts with us, and we'll use this information to continue improving our service."
         }
         

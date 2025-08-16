@@ -12,6 +12,7 @@ class Feedback(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     text = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), index=True)  # Add index for filtering
+    processing_status = db.Column(db.String(20), default='processing', index=True)  # processing, completed, failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)  # Add index for sorting
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -30,6 +31,7 @@ class Feedback(db.Model):
             'id': self.id,
             'text': self.text,
             'category': self.category,
+            'processing_status': self.processing_status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

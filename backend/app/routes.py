@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, Response
 from sqlalchemy.orm import joinedload
 from app import db
 from app.models import Feedback, SentimentAnalysis, AIResponse, AudioFile
@@ -7,8 +7,12 @@ from app.validators import (
     FeedbackValidator, QueryValidator, ValidationError,
     validate_json_request, handle_database_errors
 )
+from app.background_processor import background_processor
+from app.sse_manager import sse_manager
 import os
 import logging
+import json
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -80,16 +84,8 @@ def submit_feedback():
         
         logger.info(f"Feedback {feedback.id} created successfully")
         
-        # Process feedback through enhanced pipeline (async-like approach)
-        try:
-            processor = FeedbackProcessor()
-            success = processor.process_feedback_complete(feedback.id)
-            
-            if not success:
-                logger.warning(f"Processing failed for feedback {feedback.id}, but feedback was saved")
-        except Exception as e:
-            logger.error(f"Processing error for feedback {feedback.id}: {str(e)}")
-            # Don't fail the request if processing fails
+        # Queue feedback for background processing
+        background_processor.queue_feedback_processing(feedback.id)
         
         return jsonify({
             'status': 'success',
@@ -329,3 +325,35 @@ def dashboard_stats():
             'status': 'error',
             'message': f'Failed to retrieve dashboard stats: {str(e)}'
         }), 500
+
+@api_bp.route('/events', methods=['GET'])
+def sse_stream():
+    """Server-Sent Events endpoint for real-time updates."""
+    client = sse_manager.add_client()
+    
+    def event_generator():
+        try:
+            # Send initial connection event
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE connection established'})}\n\n"
+            
+            # Stream events from the client
+            for event in client.get_events():
+                yield event
+                
+        except GeneratorExit:
+            # Client disconnected
+            client.disconnect()
+        except Exception as e:
+            logger.error(f"SSE stream error: {str(e)}")
+            client.disconnect()
+    
+    return Response(
+        event_generator(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control'
+        }
+    )

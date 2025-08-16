@@ -64,7 +64,7 @@ export default function FeedbackForm() {
       if (response.status === "success") {
         setSubmitMessage({
           type: "success",
-          text: "Feedback submitted successfully! Processing in progress...",
+          text: "Feedback submitted successfully! Processing has started - check the dashboard for real-time updates.",
         });
         form.reset();
       } else {
@@ -104,7 +104,7 @@ export default function FeedbackForm() {
                     <FormLabel>Category</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="shadow-none">
