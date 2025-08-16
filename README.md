@@ -264,29 +264,30 @@ In your **GitHub repository** → Settings → Secrets and variables → Actions
 
 #### Container Registry Secrets:
 
-1. **REGISTRY_USERNAME** - Your Container Registry username (from Access keys)
-2. **REGISTRY_PASSWORD** - Your Container Registry password (from Access keys)
+1. **REGISTRY_LOGIN_SERVER** - Your Container Registry login server (e.g., `yourregistry-xxxxx.azurecr.io`)
+2. **REGISTRY_USERNAME** - Your Container Registry username (from Access keys)
+3. **REGISTRY_PASSWORD** - Your Container Registry password (from Access keys)
 
 #### Azure Deployment Secrets:
 
-3. **AZURE_CREDENTIALS** - Service Principal JSON for Container Apps deployment
-4. **AZURE_STORAGE_CONNECTION_STRING** - Storage account connection string
+4. **AZURE_CREDENTIALS** - Service Principal JSON for Container Apps deployment
+5. **AZURE_STORAGE_CONNECTION_STRING** - Storage account connection string
 
 #### Application Environment Secrets:
 
-5. **AZURE_TEXT_ANALYTICS_KEY** - Your Text Analytics key
-6. **AZURE_TEXT_ANALYTICS_ENDPOINT** - Your Text Analytics endpoint
-7. **AZURE_SPEECH_KEY** - Your Speech service key
-8. **AZURE_SPEECH_REGION** - Your Speech service region
-9. **OPENAI_API_KEY** - Your OpenAI API key
-10. **OPENAI_MODEL** - `gpt-4o`
-11. **SECRET_KEY** - Secure random string for Flask
-12. **CORS_ORIGINS** - Your Static Web App URL
+6. **AZURE_TEXT_ANALYTICS_KEY** - Your Text Analytics key
+7. **AZURE_TEXT_ANALYTICS_ENDPOINT** - Your Text Analytics endpoint
+8. **AZURE_SPEECH_KEY** - Your Speech service key
+9. **AZURE_SPEECH_REGION** - Your Speech service region
+10. **OPENAI_API_KEY** - Your OpenAI API key
+11. **OPENAI_MODEL** - `gpt-4o`
+12. **SECRET_KEY** - Secure random string for Flask
+13. **CORS_ORIGINS** - Your Static Web App URL
 
 #### Frontend Deployment:
 
-13. **AZURE_STATIC_WEB_APPS_API_TOKEN** - Static Web App deployment token
-14. **REACT_APP_API_URL** - `https://basf-feedback-api.azurecontainerapps.io/api/v1`
+14. **AZURE_STATIC_WEB_APPS_API_TOKEN** - Static Web App deployment token
+15. **REACT_APP_API_URL** - `https://basf-feedback-api.azurecontainerapps.io/api/v1`
 
 **⚠️ Note**: Your Container App URL format is `https://[app-name].[random-string].[region].azurecontainerapps.io`
 
