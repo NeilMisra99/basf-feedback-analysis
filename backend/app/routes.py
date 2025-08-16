@@ -336,11 +336,20 @@ def dashboard_stats():
         # Build lightweight response with only necessary data
         recent_feedback_data = []
         for row in recent_results:
+            # Handle created_at - it might be a string from SQLite
+            created_at_iso = None
+            if row.created_at:
+                if hasattr(row.created_at, 'isoformat'):
+                    created_at_iso = row.created_at.isoformat()
+                else:
+                    # If it's already a string from SQLite, use it directly
+                    created_at_iso = str(row.created_at)
+            
             feedback_item = {
                 'id': row.id,
                 'text': row.text,
                 'category': row.category,
-                'created_at': row.created_at.isoformat() if row.created_at else None,
+                'created_at': created_at_iso,
                 'processing_status': row.processing_status,
                 'sentiment_analysis': {
                     'sentiment': row.sentiment,
