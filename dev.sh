@@ -58,6 +58,7 @@ echo "🌐 Application URLs:"
 echo "   Frontend: http://localhost:3000"
 echo "   Backend:  http://localhost:5001"
 echo "   Health:   http://localhost:5001/api/v1/health"
+echo "   Note: Production uses port 80 (handled by Container Apps)"
 echo ""
 echo "Press Ctrl+C to stop both servers"
 

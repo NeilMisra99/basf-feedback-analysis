@@ -49,12 +49,13 @@ jobs:
         containerAppName: ${{ env.CONTAINER_APP_NAME }}
         resourceGroup: feedback-analysis-rg
         imageToDeploy: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        targetPort: 5001
+        targetPort: 80
         registryUrl: ${{ secrets.REGISTRY_LOGIN_SERVER }}
         registryUsername: ${{ secrets.REGISTRY_USERNAME }}
         registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
         environmentVariables: |
           FLASK_ENV=production
+          PORT=80
           AZURE_TEXT_ANALYTICS_KEY=${{ secrets.AZURE_TEXT_ANALYTICS_KEY }}
           AZURE_TEXT_ANALYTICS_ENDPOINT=${{ secrets.AZURE_TEXT_ANALYTICS_ENDPOINT }}
           AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}
