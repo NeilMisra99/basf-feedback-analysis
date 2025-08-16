@@ -29,7 +29,7 @@ from app import create_app
 app = create_app()
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     debug = os.environ.get('FLASK_ENV') == 'development'
     
     # Configure logging for production
