@@ -2,7 +2,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, LayoutDashboard } from "lucide-react";
 import { Suspense, lazy } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { DashboardSkeleton, FeedbackFormSkeleton } from "./components/ui/loading";
+import {
+  DashboardSkeleton,
+  FeedbackFormSkeleton,
+} from "./components/ui/loading";
 
 // Lazy load components for better code splitting
 // Azure deployment test

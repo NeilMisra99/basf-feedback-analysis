@@ -71,12 +71,13 @@ export default function FeedbackForm() {
         throw new Error(response.message || "Failed to submit feedback");
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : typeof error === 'object' && error !== null && 'message' in error
-        ? String((error as { message: unknown }).message)
-        : "Failed to submit feedback. Please try again.";
-        
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String((error as { message: unknown }).message)
+            : "Failed to submit feedback. Please try again.";
+
       setSubmitMessage({
         type: "error",
         text: errorMessage,
@@ -102,10 +103,7 @@ export default function FeedbackForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="shadow-none">
                           <SelectValue placeholder="Select a category" />

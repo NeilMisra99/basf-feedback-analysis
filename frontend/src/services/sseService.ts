@@ -2,10 +2,10 @@
  * Server-Sent Events service for real-time feedback updates
  */
 
-import type { Feedback } from '../types';
+import type { Feedback } from "../types";
 
 export interface SSEEvent {
-  type: 'connected' | 'heartbeat' | 'feedback_update';
+  type: "connected" | "heartbeat" | "feedback_update";
   data?: Feedback;
   message?: string;
   timestamp?: number;
@@ -35,7 +35,7 @@ class SSEService {
 
     try {
       this.eventSource = new EventSource(`${this.apiUrl}/events`);
-      
+
       this.eventSource.onopen = () => {
         this.isConnected = true;
         this.reconnectAttempts = 0;
@@ -44,29 +44,28 @@ class SSEService {
       this.eventSource.onmessage = (event) => {
         try {
           const data: SSEEvent = JSON.parse(event.data);
-          
-          this.eventHandlers.forEach(handler => {
+
+          this.eventHandlers.forEach((handler) => {
             try {
               handler(data);
             } catch (error) {
-              console.error('Error in SSE event handler:', error);
+              console.error("Error in SSE event handler:", error);
             }
           });
         } catch (error) {
-          console.error('Error parsing SSE data:', error);
+          console.error("Error parsing SSE data:", error);
         }
       };
 
       this.eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
+        console.error("SSE connection error:", error);
         this.isConnected = false;
-        
+
         // Attempt to reconnect
         this.handleReconnect();
       };
-
     } catch (error) {
-      console.error('Failed to create SSE connection:', error);
+      console.error("Failed to create SSE connection:", error);
       this.handleReconnect();
     }
   }
@@ -88,7 +87,7 @@ class SSEService {
    */
   addEventListener(handler: SSEEventHandler): () => void {
     this.eventHandlers.add(handler);
-    
+
     // Return cleanup function
     return () => {
       this.eventHandlers.delete(handler);
@@ -107,14 +106,13 @@ class SSEService {
    */
   private handleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached. Giving up.');
+      console.error("Max reconnection attempts reached. Giving up.");
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
-    
-    
+
     setTimeout(() => {
       this.disconnect(); // Clean up before reconnecting
       this.connect();

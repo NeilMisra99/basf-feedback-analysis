@@ -52,8 +52,10 @@ function Dashboard() {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  // Setup SSE connection for real-time updates
+  // Setup SSE connection for real-time updates - delay until initial load is complete
   useEffect(() => {
+    // Only start SSE after initial load is complete
+    if (loading) return;
     const handleSSEEvent = (event: SSEEvent) => {
       switch (event.type) {
         case 'feedback_update':
@@ -96,7 +98,7 @@ function Dashboard() {
       removeListener();
       sseService.disconnect();
     };
-  }, [loadDashboardData]);
+  }, [loadDashboardData, loading]);
 
   if (loading) {
     return <DashboardSkeleton />;

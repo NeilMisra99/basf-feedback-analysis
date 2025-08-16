@@ -1,19 +1,21 @@
-import path from "path"
-import tailwindcss from "@tailwindcss/vite"
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import path from "path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
     react({
       // Optimize JSX runtime
-      jsxRuntime: 'automatic',
+      jsxRuntime: "automatic",
     }),
-    tailwindcss()
+    tailwindcss(),
   ],
   // Define environment variables for browser
   define: {
-    'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL)
+    "process.env.REACT_APP_API_URL": JSON.stringify(
+      process.env.REACT_APP_API_URL
+    ),
   },
   resolve: {
     alias: {
@@ -23,15 +25,15 @@ export default defineConfig({
   // Optimize dependency pre-bundling
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
-      'react-hook-form',
-      '@hookform/resolvers/zod',
-      'zod',
-      'axios',
-      'lucide-react',
+      "react",
+      "react-dom",
+      "react-hook-form",
+      "@hookform/resolvers/zod",
+      "zod",
+      "axios",
+      "lucide-react",
     ],
-    exclude: ['@vitejs/plugin-react'],
+    exclude: ["@vitejs/plugin-react"],
   },
   server: {
     host: true,
@@ -41,8 +43,8 @@ export default defineConfig({
       overlay: true,
     },
     proxy: {
-      '/api': {
-        target: process.env.REACT_APP_API_URL || 'http://localhost:5001',
+      "/api": {
+        target: process.env.REACT_APP_API_URL || "http://localhost:5001",
         changeOrigin: true,
         secure: false,
       },
@@ -53,36 +55,45 @@ export default defineConfig({
     port: 3000,
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: false,
     // Use esbuild for minification (faster and compatible)
-    minify: 'esbuild',
+    minify: "esbuild",
     // Chunk size warning limit
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         // Enhanced manual chunks for better caching
         manualChunks: {
-          vendor: ['react', 'react-dom'],
+          vendor: ["react", "react-dom"],
           ui: [
-            '@radix-ui/react-label', 
-            '@radix-ui/react-select', 
-            '@radix-ui/react-slot',
-            '@radix-ui/react-tabs',
-            'lucide-react'
+            "@radix-ui/react-label",
+            "@radix-ui/react-select",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-tabs",
+            "lucide-react",
           ],
-          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
-          utils: ['axios', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
+          utils: [
+            "axios",
+            "clsx",
+            "tailwind-merge",
+            "class-variance-authority",
+          ],
         },
         // Optimize chunk file names for caching
         chunkFileNames: (chunkInfo) => {
           const facadeModuleId = chunkInfo.facadeModuleId
-            ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '') || 'chunk'
-            : 'chunk';
+            ? chunkInfo.facadeModuleId
+                .split("/")
+                .pop()
+                ?.replace(".tsx", "")
+                .replace(".ts", "") || "chunk"
+            : "chunk";
           return `js/${facadeModuleId}-[hash].js`;
         },
         assetFileNames: (assetInfo) => {
-          const fileName = assetInfo.name || 'asset';
+          const fileName = assetInfo.name || "asset";
           if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(fileName)) {
             return `img/[name]-[hash][extname]`;
           }
@@ -94,4 +105,4 @@ export default defineConfig({
       },
     },
   },
-})
+});

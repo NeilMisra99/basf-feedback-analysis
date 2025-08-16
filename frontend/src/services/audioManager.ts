@@ -28,8 +28,8 @@ export class AudioManager {
 
   private constructor() {
     // Cleanup on page unload
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', this.cleanup.bind(this));
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", this.cleanup.bind(this));
     }
   }
 
@@ -42,11 +42,11 @@ export class AudioManager {
 
   private notify(): void {
     const state = this.getCurrentState();
-    this.listeners.forEach(callback => {
+    this.listeners.forEach((callback) => {
       try {
         callback(state);
       } catch (error) {
-        console.error('Error in audio state listener:', error);
+        console.error("Error in audio state listener:", error);
       }
     });
   }
@@ -70,12 +70,12 @@ export class AudioManager {
     }
 
     const audio = new Audio();
-    audio.preload = 'metadata';
+    audio.preload = "metadata";
     audio.src = audioUrl;
-    
+
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Audio preload timeout'));
+        reject(new Error("Audio preload timeout"));
       }, 5000);
 
       audio.onloadedmetadata = () => {
@@ -86,7 +86,7 @@ export class AudioManager {
 
       audio.onerror = () => {
         clearTimeout(timeout);
-        reject(new Error('Failed to preload audio'));
+        reject(new Error("Failed to preload audio"));
       };
     });
   }
@@ -98,7 +98,7 @@ export class AudioManager {
 
       // Try to get from cache first
       let audio = this.audioPreloadCache.get(audioUrl);
-      
+
       if (!audio) {
         audio = new Audio(audioUrl);
         this.audioPreloadCache.set(audioUrl, audio);
@@ -127,7 +127,7 @@ export class AudioManager {
 
     audio.onplay = () => this.notify();
     audio.onpause = () => this.notify();
-    
+
     audio.onended = () => {
       this.cleanup();
       this.notify();
@@ -142,7 +142,8 @@ export class AudioManager {
     let lastUpdateTime = 0;
     audio.ontimeupdate = () => {
       const now = Date.now();
-      if (now - lastUpdateTime > 1000) { // Update every second
+      if (now - lastUpdateTime > 1000) {
+        // Update every second
         lastUpdateTime = now;
         this.notify();
       }
@@ -152,13 +153,13 @@ export class AudioManager {
   private startPlayback(audio: HTMLAudioElement): Promise<void> {
     return new Promise((resolve, reject) => {
       const playPromise = audio.play();
-      
+
       if (playPromise !== undefined) {
         playPromise
           .then(() => resolve())
           .catch((error) => {
-            console.error('Audio play failed:', error);
-            reject(new Error('Failed to start audio playback'));
+            console.error("Audio play failed:", error);
+            reject(new Error("Failed to start audio playback"));
           });
       } else {
         resolve();
@@ -209,7 +210,7 @@ export class AudioManager {
   private cleanup(): void {
     if (this.currentAudio) {
       this.currentAudio.pause();
-      this.currentAudio.src = '';
+      this.currentAudio.src = "";
       this.currentAudio.load(); // This helps with memory cleanup
     }
     this.currentAudio = null;
@@ -218,9 +219,9 @@ export class AudioManager {
 
   // Clean up cached audio elements (call when component unmounts)
   clearCache(): void {
-    this.audioPreloadCache.forEach(audio => {
+    this.audioPreloadCache.forEach((audio) => {
       audio.pause();
-      audio.src = '';
+      audio.src = "";
       audio.load();
     });
     this.audioPreloadCache.clear();

@@ -35,7 +35,7 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
   useEffect(() => {
     const unsubscribe = audioManager.subscribe((state: AudioState) => {
       setAudioState(state);
-      
+
       // Update loading state based on audio state
       if (state.feedbackId === feedback.id) {
         setAudioLoading(false);
@@ -48,7 +48,8 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
   }, [feedback.id]);
 
   // Memoize derived state
-  const isCurrentlyPlaying = audioState.feedbackId === feedback.id && audioState.isPlaying;
+  const isCurrentlyPlaying =
+    audioState.feedbackId === feedback.id && audioState.isPlaying;
 
   // Memoize icon components for better performance
   const getSentimentIcon = useCallback((sentiment: string) => {
@@ -97,7 +98,12 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
       setAudioLoading(false);
       console.error("Error with audio playback:", error);
     }
-  }, [feedback.id, feedback.audio_file, feedback.audio_url, isCurrentlyPlaying]);
+  }, [
+    feedback.id,
+    feedback.audio_file,
+    feedback.audio_url,
+    isCurrentlyPlaying,
+  ]);
 
   const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -105,23 +111,23 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
 
   const getProcessingStatusDisplay = useCallback(() => {
     switch (feedback.processing_status) {
-      case 'processing':
+      case "processing":
         return {
           icon: <Loader2 className="h-4 w-4 animate-spin" />,
-          text: 'Processing...',
-          className: 'bg-blue-100 text-blue-800 border-blue-200'
+          text: "Processing...",
+          className: "bg-blue-100 text-blue-800 border-blue-200",
         };
-      case 'completed':
+      case "completed":
         return {
           icon: <CheckCircle className="h-4 w-4" />,
-          text: 'Completed',
-          className: 'bg-green-100 text-green-800 border-green-200'
+          text: "Completed",
+          className: "bg-green-100 text-green-800 border-green-200",
         };
-      case 'failed':
+      case "failed":
         return {
           icon: <AlertCircle className="h-4 w-4" />,
-          text: 'Failed',
-          className: 'bg-red-100 text-red-800 border-red-200'
+          text: "Failed",
+          className: "bg-red-100 text-red-800 border-red-200",
         };
       default:
         return null;
@@ -130,10 +136,11 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
 
   const maxLength = 200;
   const shouldShowExpand = feedback.text.length > maxLength;
-  
-  const displayText = shouldShowExpand && !isExpanded 
-    ? feedback.text.substring(0, maxLength) + "..."
-    : feedback.text;
+
+  const displayText =
+    shouldShowExpand && !isExpanded
+      ? feedback.text.substring(0, maxLength) + "..."
+      : feedback.text;
 
   return (
     <Card className="transition-colors rounded-lg shadow-none">
@@ -144,7 +151,9 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
             <div className="flex items-center gap-2 mb-2">
               <Badge className="bg-white text-black">{feedback.category}</Badge>
               {getProcessingStatusDisplay() && (
-                <Badge className={`gap-1 ${getProcessingStatusDisplay()?.className}`}>
+                <Badge
+                  className={`gap-1 ${getProcessingStatusDisplay()?.className}`}
+                >
                   {getProcessingStatusDisplay()?.icon}
                   {getProcessingStatusDisplay()?.text}
                 </Badge>
@@ -157,9 +166,7 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
 
             {/* Feedback Text */}
             <div className="mb-2">
-              <p className="text-sm text-foreground">
-                {displayText}
-              </p>
+              <p className="text-sm text-foreground">{displayText}</p>
 
               {shouldShowExpand && (
                 <Button
@@ -184,59 +191,66 @@ function FeedbackCard({ feedback }: FeedbackCardProps) {
             </div>
 
             {/* Sentiment Analysis - only show when processing is completed */}
-            {feedback.sentiment_analysis && feedback.processing_status === 'completed' && (
-              <div className="flex items-center gap-2 mb-2">
-                <Badge
-                  className={`gap-1 ${getSentimentClassNames(
-                    feedback.sentiment_analysis.sentiment
-                  )}`}
-                >
-                  {getSentimentIcon(feedback.sentiment_analysis.sentiment)}
-                  {feedback.sentiment_analysis.sentiment}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {Math.round(
-                    (feedback.sentiment_analysis.confidence_score || 0) * 100
-                  )}
-                  % confidence
-                </span>
-              </div>
-            )}
+            {feedback.sentiment_analysis &&
+              feedback.processing_status === "completed" && (
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge
+                    className={`gap-1 ${getSentimentClassNames(
+                      feedback.sentiment_analysis.sentiment
+                    )}`}
+                  >
+                    {getSentimentIcon(feedback.sentiment_analysis.sentiment)}
+                    {feedback.sentiment_analysis.sentiment}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {Math.round(
+                      (feedback.sentiment_analysis.confidence_score || 0) * 100
+                    )}
+                    % confidence
+                  </span>
+                </div>
+              )}
 
             {/* AI Response - only show when processing is completed */}
-            {feedback.ai_response && feedback.processing_status === 'completed' && (
-              <div className="rounded-lg p-2 bg-gray-50">
-                <h4 className="text-sm font-medium text-foreground mb-1">
-                  AI Response
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  {feedback.ai_response.response_text}
-                </p>
-              </div>
-            )}
+            {feedback.ai_response &&
+              feedback.processing_status === "completed" && (
+                <div className="rounded-lg p-2 bg-gray-50">
+                  <h4 className="text-sm font-medium text-foreground mb-1">
+                    AI Response
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {feedback.ai_response.response_text}
+                  </p>
+                </div>
+              )}
           </div>
 
           {/* Audio Player - only show when processing is completed */}
-          {feedback.audio_file && feedback.processing_status === 'completed' && (
-            <div className="flex-shrink-0">
-              <Button
-                onClick={toggleAudio}
-                disabled={audioLoading}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                {audioLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isCurrentlyPlaying ? (
-                  <Pause className="h-4 w-4" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                {audioLoading ? "Loading" : isCurrentlyPlaying ? "Pause" : "Play"}
-              </Button>
-            </div>
-          )}
+          {feedback.audio_file &&
+            feedback.processing_status === "completed" && (
+              <div className="flex-shrink-0">
+                <Button
+                  onClick={toggleAudio}
+                  disabled={audioLoading}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  {audioLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isCurrentlyPlaying ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {audioLoading
+                    ? "Loading"
+                    : isCurrentlyPlaying
+                      ? "Pause"
+                      : "Play"}
+                </Button>
+              </div>
+            )}
         </div>
       </CardContent>
     </Card>
