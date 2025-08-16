@@ -33,10 +33,13 @@ class SSEService {
       return;
     }
 
+    console.log(`[SSE] Connecting to ${this.apiUrl}/events`);
+
     try {
       this.eventSource = new EventSource(`${this.apiUrl}/events`);
 
       this.eventSource.onopen = () => {
+        console.log("[SSE] Connection opened successfully");
         this.isConnected = true;
         this.reconnectAttempts = 0;
       };
@@ -44,28 +47,34 @@ class SSEService {
       this.eventSource.onmessage = (event) => {
         try {
           const data: SSEEvent = JSON.parse(event.data);
+          console.log("[SSE] Received event:", data.type, data);
 
           this.eventHandlers.forEach((handler) => {
             try {
               handler(data);
             } catch (error) {
-              console.error("Error in SSE event handler:", error);
+              console.error("[SSE] Error in event handler:", error);
             }
           });
         } catch (error) {
-          console.error("Error parsing SSE data:", error);
+          console.error("[SSE] Error parsing data:", error, event.data);
         }
       };
 
       this.eventSource.onerror = (error) => {
-        console.error("SSE connection error:", error);
+        console.error("[SSE] Connection error:", error);
         this.isConnected = false;
+
+        // Check if this is a normal close or an actual error
+        if (this.eventSource?.readyState === EventSource.CLOSED) {
+          console.log("[SSE] Connection closed, attempting reconnect...");
+        }
 
         // Attempt to reconnect
         this.handleReconnect();
       };
     } catch (error) {
-      console.error("Failed to create SSE connection:", error);
+      console.error("[SSE] Failed to create connection:", error);
       this.handleReconnect();
     }
   }
@@ -106,12 +115,14 @@ class SSEService {
    */
   private handleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("Max reconnection attempts reached. Giving up.");
+      console.error("[SSE] Max reconnection attempts reached. Giving up.");
       return;
     }
 
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000); // Cap at 30 seconds
+
+    console.log(`[SSE] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
       this.disconnect(); // Clean up before reconnecting

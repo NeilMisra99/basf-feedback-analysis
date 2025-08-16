@@ -423,9 +423,12 @@ def sse_stream():
         event_generator(),
         mimetype='text/event-stream',
         headers={
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Cache-Control'
+            'Access-Control-Allow-Headers': 'Cache-Control',
+            'X-Accel-Buffering': 'no',  # Disable Nginx buffering
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Transfer-Encoding': 'chunked'  # Force chunked transfer
         }
     )
