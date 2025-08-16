@@ -53,15 +53,4 @@ jobs:
         registryUrl: ${{ secrets.REGISTRY_LOGIN_SERVER }}
         registryUsername: ${{ secrets.REGISTRY_USERNAME }}
         registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
-        environmentVariables: |
-          FLASK_ENV=production
-          PORT=8080
-          AZURE_TEXT_ANALYTICS_KEY=${{ secrets.AZURE_TEXT_ANALYTICS_KEY }}
-          AZURE_TEXT_ANALYTICS_ENDPOINT=${{ secrets.AZURE_TEXT_ANALYTICS_ENDPOINT }}
-          AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}
-          AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}
-          AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+        environmentVariables: "FLASK_ENV=production PORT=8080 AZURE_TEXT_ANALYTICS_KEY=${{ secrets.AZURE_TEXT_ANALYTICS_KEY }} AZURE_TEXT_ANALYTICS_ENDPOINT=${{ secrets.AZURE_TEXT_ANALYTICS_ENDPOINT }} AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }} AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }} AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }} OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_MODEL=${{ secrets.OPENAI_MODEL }} SECRET_KEY=${{ secrets.SECRET_KEY }} CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}"
