@@ -27,8 +27,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         case "feedback_update":
           if (event.data) {
             setLatestFeedback(event.data);
-            // Trigger refresh for components that need to reload data
-            triggerRefresh();
+            // Don't trigger refresh - let components handle SSE updates directly
+            // triggerRefresh() would cause race conditions with API calls
           }
           break;
         case "connected":
