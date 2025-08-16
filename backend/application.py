@@ -23,7 +23,6 @@ if os.environ.get('FLASK_ENV') != 'production':
         print(f"Please ensure .env.local exists in: {root_dir}")
         sys.exit(1)
     
-    print("✅ Environment variables loaded successfully")
 else:
     # Production mode - validate environment variables are set by Container Apps
     required_vars = ['SECRET_KEY', 'AZURE_TEXT_ANALYTICS_KEY', 'AZURE_SPEECH_KEY', 'OPENAI_API_KEY']
@@ -34,7 +33,6 @@ else:
         print("Please check Container Apps environment variable configuration")
         sys.exit(1)
     
-    print("✅ Production environment variables loaded successfully")
 
 from app import create_app
 app = create_app()
