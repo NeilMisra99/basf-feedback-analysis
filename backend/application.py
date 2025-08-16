@@ -1,9 +1,9 @@
 import os
 import sys
 
-# Load .env files in development or when not running in Azure
-# In production (Azure), WEBSITE_SITE_NAME environment variable is automatically set
-if not os.environ.get('WEBSITE_SITE_NAME'):
+# Load .env files in development only
+# In production (Container Apps), FLASK_ENV is set to 'production'
+if os.environ.get('FLASK_ENV') != 'production':
     from dotenv import load_dotenv
     # Get the root directory (parent of backend directory)
     backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +24,17 @@ if not os.environ.get('WEBSITE_SITE_NAME'):
         sys.exit(1)
     
     print("✅ Environment variables loaded successfully")
+else:
+    # Production mode - validate environment variables are set by Container Apps
+    required_vars = ['SECRET_KEY', 'AZURE_TEXT_ANALYTICS_KEY', 'AZURE_SPEECH_KEY', 'OPENAI_API_KEY']
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+    
+    if missing_vars:
+        print(f"❌ Missing required environment variables in production: {', '.join(missing_vars)}")
+        print("Please check Container Apps environment variable configuration")
+        sys.exit(1)
+    
+    print("✅ Production environment variables loaded successfully")
 
 from app import create_app
 app = create_app()
