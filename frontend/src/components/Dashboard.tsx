@@ -218,7 +218,7 @@ export default function Dashboard() {
         <div>
           <h2 className="text-lg font-semibold">All Feedback</h2>
           <p className="text-sm text-muted-foreground">
-            {pagination &&
+            {pagination && pagination.total > 0 &&
               `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
           </p>
         </div>
