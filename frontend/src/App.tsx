@@ -6,11 +6,11 @@ import {
   DashboardSkeleton,
   FeedbackFormSkeleton,
 } from "./components/ui/loading";
+import Dashboard from "./components/Dashboard";
 
-// Lazy load components for better code splitting
-// Azure deployment test
+// Lazy load only the feedback form
+// Dashboard loads immediately for faster tab switching
 const FeedbackForm = lazy(() => import("./components/FeedbackForm"));
-const Dashboard = lazy(() => import("./components/Dashboard"));
 
 function App() {
   return (
@@ -59,9 +59,7 @@ function App() {
               className="bg-muted p-8 rounded-2xl h-[600px]"
             >
               <ErrorBoundary>
-                <Suspense fallback={<DashboardSkeleton />}>
-                  <Dashboard />
-                </Suspense>
+                <Dashboard />
               </ErrorBoundary>
             </TabsContent>
           </Tabs>
