@@ -108,6 +108,20 @@ export default function Dashboard() {
     // Mark this feedback as processed to avoid duplicates
     setProcessedFeedbackIds((prev) => new Set(prev).add(latestFeedback.id));
 
+    // Update the feedback list with the latest status
+    setFeedback((prevFeedback) => {
+      const existingIndex = prevFeedback.findIndex(f => f.id === latestFeedback.id);
+      if (existingIndex >= 0) {
+        // Update existing feedback item
+        const updatedFeedback = [...prevFeedback];
+        updatedFeedback[existingIndex] = latestFeedback;
+        return updatedFeedback;
+      } else {
+        // Add new feedback item at the beginning (for new submissions)
+        return [latestFeedback, ...prevFeedback];
+      }
+    });
+
     // Update stats if we have them and feedback is completed
     if (
       latestFeedback.processing_status === "completed" &&
@@ -128,8 +142,6 @@ export default function Dashboard() {
         };
       });
     }
-
-    // Feedback processed - stats already updated above
   }, [latestFeedback, stats, processedFeedbackIds]);
 
   if (statsLoading && (!feedback || feedback.length === 0)) {
