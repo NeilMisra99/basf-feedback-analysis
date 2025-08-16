@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file, Response
 from sqlalchemy.orm import joinedload
 from app import db
-from app.models import Feedback, SentimentAnalysis, AIResponse, AudioFile
+from app.models import Feedback, AudioFile
 from app.services import FeedbackProcessor
 from app.validators import (
     FeedbackValidator, QueryValidator, ValidationError,

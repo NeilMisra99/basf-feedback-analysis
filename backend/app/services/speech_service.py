@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import azure.cognitiveservices.speech as speechsdk
 from .base import BaseExternalService, retry_on_failure, ServiceResponse
 from .blob_storage import BlobStorageService

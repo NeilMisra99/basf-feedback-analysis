@@ -5,7 +5,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Dict, Set
+from typing import Dict
 from app.models import Feedback
 
 logger = logging.getLogger(__name__)

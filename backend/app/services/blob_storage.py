@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Optional, Tuple
+from typing import Optional
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions, ContentSettings
 from datetime import datetime, timedelta
 from .base import BaseExternalService, ServiceResponse

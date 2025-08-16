@@ -1,7 +1,6 @@
 """Background processing system for async feedback processing."""
 
 import threading
-import time
 import logging
 from queue import Queue
 from typing import Optional
