@@ -281,31 +281,58 @@ def get_audio(audio_id):
 @api_bp.route('/dashboard/stats', methods=['GET'])
 def dashboard_stats():
     try:
-        # Use efficient queries for dashboard stats
-        total_feedback = Feedback.query.count()
+        # Single optimized query for all stats using subqueries
+        from sqlalchemy import and_, func
         
-        # Optimized sentiment breakdown with single query
+        # Get basic counts in one query
+        stats_query = db.session.query(
+            func.count(Feedback.id).label('total_feedback')
+        ).first()
+        
+        total_feedback = stats_query.total_feedback
+        
+        # Quick sentiment breakdown (only for completed feedback)
         sentiment_stats = db.session.query(
             SentimentAnalysis.sentiment,
-            db.func.count(SentimentAnalysis.id)
+            func.count(SentimentAnalysis.id)
+        ).join(Feedback).filter(
+            Feedback.processing_status == 'completed'
         ).group_by(SentimentAnalysis.sentiment).all()
         
         sentiment_breakdown = {sentiment: count for sentiment, count in sentiment_stats}
         
-        # Get recent feedback with eager loading
-        recent_feedback = Feedback.query.options(
-            joinedload(Feedback.sentiment_analysis),
-            joinedload(Feedback.ai_response),
-            joinedload(Feedback.audio_file)
-        ).order_by(Feedback.created_at.desc()).limit(5).all()
-        
-        # Category breakdown for additional insights
+        # Quick category breakdown
         category_stats = db.session.query(
             Feedback.category,
-            db.func.count(Feedback.id)
+            func.count(Feedback.id)
         ).group_by(Feedback.category).all()
         
         category_breakdown = {category or 'uncategorized': count for category, count in category_stats}
+        
+        # Lightweight recent feedback (minimal data, no heavy joins)
+        recent_feedback_query = db.session.query(
+            Feedback.id,
+            Feedback.text,
+            Feedback.category,
+            Feedback.created_at,
+            Feedback.processing_status
+        ).order_by(Feedback.created_at.desc()).limit(5).all()
+        
+        # Build lightweight feedback data
+        recent_feedback = []
+        for fb in recent_feedback_query:
+            recent_feedback.append({
+                'id': fb.id,
+                'text': fb.text,
+                'category': fb.category,
+                'created_at': fb.created_at.isoformat(),
+                'processing_status': fb.processing_status,
+                # Skip heavy related data for dashboard - SSE will update with full data when needed
+                'sentiment_analysis': None,
+                'ai_response': None,
+                'audio_file': None,
+                'audio_url': None
+            })
         
         return jsonify({
             'status': 'success',
@@ -313,10 +340,7 @@ def dashboard_stats():
                 'total_feedback': total_feedback,
                 'sentiment_breakdown': sentiment_breakdown,
                 'category_breakdown': category_breakdown,
-                'recent_feedback': [
-                    _build_complete_feedback_data(feedback)
-                    for feedback in recent_feedback
-                ]
+                'recent_feedback': recent_feedback
             }
         })
         
