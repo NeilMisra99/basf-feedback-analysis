@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional
 import azure.cognitiveservices.speech as speechsdk
 from .base import BaseExternalService, retry_on_failure, ServiceResponse
+from .blob_storage import BlobStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class AzureSpeechService(BaseExternalService):
         super().__init__("Azure Speech")
         self.speech_key = os.environ.get('AZURE_SPEECH_KEY')
         self.speech_region = os.environ.get('AZURE_SPEECH_REGION')
+        self.blob_storage = BlobStorageService()
         self.initialize()
     
     def _validate_credentials(self) -> bool:
@@ -89,12 +91,33 @@ class AzureSpeechService(BaseExternalService):
                 logger.info(f"Environment: {os.environ.get('FLASK_ENV', 'development')}")
                 logger.info(f"File exists check: {os.path.exists(audio_path)}")
                 
+                # Upload to Blob Storage if available
+                blob_url = None
+                sas_url = None
+                if self.blob_storage.is_available:
+                    blob_result = self.blob_storage.upload_audio_file(audio_path, feedback_id)
+                    if blob_result.success:
+                        blob_url = blob_result.data.get('blob_url')
+                        sas_url = blob_result.data.get('sas_url')
+                        logger.info(f"Audio uploaded to blob storage: {blob_url}")
+                        
+                        # Clean up local file after successful upload
+                        try:
+                            os.remove(audio_path)
+                            logger.info(f"Local audio file cleaned up: {audio_path}")
+                        except Exception as e:
+                            logger.warning(f"Failed to clean up local file: {e}")
+                    else:
+                        logger.warning(f"Failed to upload to blob storage: {blob_result.error}")
+                
                 audio_data = {
                     'file_path': audio_path,
                     'file_size': file_size,
                     'voice_used': self._get_voice_for_sentiment(sentiment, confidence),
                     'emotion_style': self._get_emotion_style(sentiment, confidence),
-                    'ssml_used': True
+                    'ssml_used': True,
+                    'blob_url': blob_url,
+                    'sas_url': sas_url
                 }
                 
                 return ServiceResponse(

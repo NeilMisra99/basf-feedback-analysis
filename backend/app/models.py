@@ -83,8 +83,11 @@ class AudioFile(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
-    file_path = db.Column(db.String(255), nullable=False, unique=True)  # Prevent duplicate files
+    file_path = db.Column(db.String(255), nullable=False, unique=True)  # Local path or blob name
+    blob_url = db.Column(db.String(500), nullable=True)  # Blob Storage URL
     duration_seconds = db.Column(db.Float)
+    file_size = db.Column(db.Integer, nullable=True)  # File size in bytes
+    storage_type = db.Column(db.String(20), default='local')  # 'local' or 'blob'
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     def to_dict(self):
@@ -92,6 +95,9 @@ class AudioFile(db.Model):
             'id': self.id,
             'feedback_id': self.feedback_id,
             'file_path': self.file_path,
+            'blob_url': self.blob_url,
             'duration_seconds': self.duration_seconds,
+            'file_size': self.file_size,
+            'storage_type': self.storage_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

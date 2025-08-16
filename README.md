@@ -30,10 +30,11 @@ A full-stack web application that analyzes customer feedback using Azure AI serv
 
 ### Cloud Infrastructure
 
+- **Azure Container Apps** for scalable backend API hosting
+- **Azure Container Registry** for Docker image management
+- **Azure Blob Storage** for persistent audio file storage
 - **Azure Static Web Apps** for frontend hosting
-- **Azure App Service** for backend API
-- **GitHub Actions** for CI/CD pipeline
-- **Application Insights** for monitoring
+- **GitHub Actions** for automated CI/CD deployment
 
 ## 🚀 Quick Setup
 
@@ -51,7 +52,7 @@ You'll need **two Azure resource groups**:
 
 **Resource Group 1: Core Services**
 
-- Contains: App Service, Static Web App, App Service Plan
+- Contains: Container Apps, Container Registry, Storage Account, Static Web App
 - Use for: Application hosting and deployment
 
 **Resource Group 2: AI Services**
@@ -105,10 +106,10 @@ You'll need **two Azure resource groups**:
 2. **Create environment file**:
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
-3. **Edit** `.env` with your API keys:
+3. **Edit** `.env.local` with your API keys:
 
    ```bash
    # Azure Text Analytics
@@ -118,6 +119,9 @@ You'll need **two Azure resource groups**:
    # Azure Speech Services
    AZURE_SPEECH_KEY=your_speech_key_here
    AZURE_SPEECH_REGION=eastus
+
+   # Azure Storage (for local development with Blob Storage)
+   AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
 
    # OpenAI
    OPENAI_API_KEY=sk-your_openai_key_here
@@ -156,6 +160,8 @@ npm run dev
 - **Backend API**: http://localhost:5001
 - **Health Check**: http://localhost:5001/api/v1/health
 
+> **Note**: Audio files are automatically uploaded to Azure Blob Storage in production for persistent, scalable storage.
+
 ## 🧪 Test Your Setup
 
 ### 1\. Test Application
@@ -168,30 +174,50 @@ npm run dev
 
 ## ☁️ Azure Deployment (Production)
 
-Deploy your application to Azure using Static Web Apps (frontend) + App Service (backend) with automated GitHub Actions.
+Deploy your application to Azure using **Container Apps** (backend) + **Static Web Apps** (frontend) + **Blob Storage** (audio files) with automated GitHub Actions.
 
-### 🏗️ Step 1: Create Hosting Infrastructure
+### 🏗️ Step 1: Create Azure Infrastructure
 
-Now create a **new resource group** for hosting your application (your AI services are already set up):
+Create a **new resource group** for hosting your application (your AI services are already set up):
 
-**Create App Service Plan:**
+**Create Container Registry:**
 
-1. **Azure Portal** → "Create resource" → "App Service Plan"
+1. **Azure Portal** → "Create resource" → "Container Registry"
 2. **Configure**:
    - **Resource Group**: Create new `feedback-analysis-rg`
-   - **Name**: `feedback-analysis-plan`
-   - **Region**: Eg: East US (same as your AI services)
-   - **Pricing**: Free F1 tier (sufficient for demo)
+   - **Registry name**: `basffeedbackregistry` (must be globally unique)
+   - **Location**: East US (same as your AI services)
+   - **SKU**: Basic (sufficient for demo)
+3. **Enable Admin user**: Settings → Access keys → Admin user (Enable)
 
-**Create App Service (Backend API):**
+**Create Storage Account:**
 
-1. **Create resource** → "Web App"
+1. **Create resource** → "Storage account"
 2. **Configure**:
    - **Resource Group**: `feedback-analysis-rg`
-   - **Name**: `basf-feedback-api` (must be globally unique)
-   - **Runtime**: Python 3.13
-   - **Region**: Eg: East US
-   - **App Service Plan**: Use existing `feedback-analysis-plan`
+   - **Storage account name**: `basffeedbackstorage` (must be globally unique)
+   - **Region**: East US
+   - **Performance**: Standard
+   - **Redundancy**: LRS (Locally-redundant storage)
+3. **Get connection string**: Access keys → Show keys → Connection string
+
+**Create Container Apps Environment:**
+
+1. **Create resource** → "Container Apps Environment"
+2. **Configure**:
+   - **Resource Group**: `feedback-analysis-rg`
+   - **Environment name**: `basf-feedback-env`
+   - **Region**: East US
+
+**Create Container App:**
+
+1. **Create resource** → "Container App"
+2. **Configure**:
+   - **Resource Group**: `feedback-analysis-rg`
+   - **Container app name**: `basf-feedback-api`
+   - **Environment**: Use existing `basf-feedback-env`
+   - **Container image**: Use quickstart image initially (we'll update via GitHub Actions)
+   - **Ingress**: Enabled, HTTP traffic from anywhere, Target port: 5001
 
 **Create Static Web App (Frontend):**
 
@@ -206,9 +232,9 @@ Now create a **new resource group** for hosting your application (your AI servic
      - **App location**: `/frontend`
      - **Output location**: `dist`
 
-### 🔧 Step 2: Configure App Service Environment Variables
+### 🔧 Step 2: Configure Container App Environment Variables
 
-In your **App Service** → Configuration → Application Settings, add these **exactly**:
+In your **Container App** → Settings → Environment variables, add these (will be overridden by GitHub Actions):
 
 ```bash
 # Azure AI Services
@@ -217,6 +243,9 @@ AZURE_TEXT_ANALYTICS_KEY=your_language_service_key_here
 AZURE_SPEECH_KEY=your_speech_service_key_here
 AZURE_SPEECH_REGION=eastus
 
+# Azure Storage (for audio files)
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=basffeedbackstorage;AccountKey=your_storage_key;EndpointSuffix=core.windows.net
+
 # OpenAI
 OPENAI_API_KEY=sk-your_openai_key_here
 OPENAI_MODEL=gpt-4o
@@ -224,34 +253,42 @@ OPENAI_MODEL=gpt-4o
 # App Configuration
 SECRET_KEY=your-secure-production-secret-key-here
 FLASK_ENV=production
-SCM_DO_BUILD_DURING_DEPLOYMENT=1
 CORS_ORIGINS=https://basf-feedback-frontend.azurestaticapps.net
 ```
 
-**⚠️ Important**: Replace `basf-feedback-frontend` with your actual Static Web App name.
+**⚠️ Important**: Replace with your actual service names and get the storage connection string from Storage Account → Access keys.
 
 ### 🔑 Step 3: Configure GitHub Secrets
 
 In your **GitHub repository** → Settings → Secrets and variables → Actions, add:
 
-#### Backend Deployment Secrets:
+#### Container Registry Secrets:
 
-1. **AZURE_BACKEND_APP_NAME**
-   - Value: `basf-feedback-api` (your App Service name)
+1. **REGISTRY_USERNAME** - Your Container Registry username (from Access keys)
+2. **REGISTRY_PASSWORD** - Your Container Registry password (from Access keys)
 
-2. **AZURE_BACKEND_PUBLISH_PROFILE**
-   - Go to App Service → Overview → "Get publish profile"
-   - Copy entire XML content as secret value
+#### Azure Deployment Secrets:
 
-#### Frontend Deployment Secrets:
+3. **AZURE_CREDENTIALS** - Service Principal JSON for Container Apps deployment
+4. **AZURE_STORAGE_CONNECTION_STRING** - Storage account connection string
 
-1. **AZURE_STATIC_WEB_APPS_API_TOKEN**
-   - Go to Static Web App → Overview → "Manage deployment token"
-   - Copy the deployment token
+#### Application Environment Secrets:
 
-2. **REACT_APP_API_URL**
-   - Value: `https://basf-feedback-api.azurewebsites.net/api/v1`
-   - Replace `basf-feedback-api` with your App Service name
+5. **AZURE_TEXT_ANALYTICS_KEY** - Your Text Analytics key
+6. **AZURE_TEXT_ANALYTICS_ENDPOINT** - Your Text Analytics endpoint
+7. **AZURE_SPEECH_KEY** - Your Speech service key
+8. **AZURE_SPEECH_REGION** - Your Speech service region
+9. **OPENAI_API_KEY** - Your OpenAI API key
+10. **OPENAI_MODEL** - `gpt-4o`
+11. **SECRET_KEY** - Secure random string for Flask
+12. **CORS_ORIGINS** - Your Static Web App URL
+
+#### Frontend Deployment:
+
+13. **AZURE_STATIC_WEB_APPS_API_TOKEN** - Static Web App deployment token
+14. **REACT_APP_API_URL** - `https://basf-feedback-api.azurecontainerapps.io/api/v1`
+
+**⚠️ Note**: Your Container App URL format is `https://[app-name].[random-string].[region].azurecontainerapps.io`
 
 ### 🚀 Step 4: Deploy via GitHub Actions
 
@@ -271,7 +308,7 @@ Your application will automatically deploy when you push to the main branch:
 
 ```bash
 # Health check
-curl https://basf-feedback-api.azurewebsites.net/api/v1/health
+curl https://basf-feedback-api.[random-string].[region].azurecontainerapps.io/api/v1/health
 
 # Expected response: {"status": "healthy", ...}
 ```
@@ -300,10 +337,10 @@ AZURE_TEXT_ANALYTICS_KEY=your-key
 REACT_APP_API_URL=http://localhost:5001/api/v1
 ```
 
-**Production (Azure App Service):**
+**Production (Azure Container Apps):**
 
 ```bash
-# Set in Azure Portal → App Service → Configuration
+# Set in Azure Portal → Container App → Environment variables
 AZURE_TEXT_ANALYTICS_KEY=your-key
 CORS_ORIGINS=https://your-static-web-app.azurestaticapps.net
 ```
@@ -312,28 +349,41 @@ CORS_ORIGINS=https://your-static-web-app.azurestaticapps.net
 
 ```bash
 # Set in GitHub → Settings → Secrets
-AZURE_BACKEND_PUBLISH_PROFILE=<xml-content>
-REACT_APP_API_URL=https://your-app-service.azurewebsites.net/api/v1
+AZURE_CREDENTIALS=<service-principal-json>
+REACT_APP_API_URL=https://your-container-app.azurecontainerapps.io/api/v1
 ```
 
 ### 🚨 Troubleshooting Deployment
 
 **"CORS error" in production:**
 
-- Update `CORS_ORIGINS` in App Service configuration
+- Update `CORS_ORIGINS` in Container App environment variables
 - Ensure it matches your Static Web App URL exactly
+- Container App format: `https://[name].[random].[region].azurecontainerapps.io`
 
 **"Environment variables not found":**
 
-- Check App Service → Configuration → Application Settings
+- Check Container App → Settings → Environment variables
 - Verify all required variables are set
-- Restart App Service after adding variables
+- Restart Container App after adding variables
 
 **"GitHub Actions failing":**
 
-- Verify all 4 GitHub secrets are set correctly
+- Verify all GitHub secrets are set correctly (especially `AZURE_CREDENTIALS`)
 - Check Actions tab for detailed error logs
-- Ensure publish profile is complete XML content
+- Ensure service principal has Contributor role on resource group
+
+**"Container deployment failing":**
+
+- Check Container Registry access keys are correct
+- Verify Docker image builds successfully
+- Check Container App logs for runtime errors
+
+**"Audio files not working":**
+
+- Verify `AZURE_STORAGE_CONNECTION_STRING` is set correctly
+- Check Blob Storage container `audio-files` exists
+- Ensure Container App has network access to Storage Account
 
 **"Static Web App not updating":**
 

@@ -139,10 +139,16 @@ class FeedbackProcessor:
             )
             
             if audio_result.success and audio_result.data:
-                # Store audio file metadata
+                # Store audio file metadata with blob information
+                audio_data = audio_result.data
+                storage_type = 'blob' if audio_data.get('blob_url') else 'local'
+                
                 audio_file = AudioFile(
                     feedback_id=feedback.id,
-                    file_path=audio_result.data['file_path'],
+                    file_path=audio_data['file_path'],
+                    blob_url=audio_data.get('blob_url'),
+                    file_size=audio_data.get('file_size', 0),
+                    storage_type=storage_type,
                     duration_seconds=self.speech_service.estimate_duration(response_data['response_text'])
                 )
                 db.session.add(audio_file)

@@ -221,7 +221,7 @@ def list_feedback():
 @api_bp.route('/audio/<audio_id>', methods=['GET'])
 @handle_database_errors
 def get_audio(audio_id):
-    """Serve audio files with proper validation and security."""
+    """Serve audio files from Blob Storage with secure access."""
     try:
         # Validate audio_id format
         if not audio_id or len(audio_id) != 36:
@@ -240,66 +240,108 @@ def get_audio(audio_id):
                 'code': 'NOT_FOUND'
             }), 404
         
-        # Validate file existence and security
-        if not os.path.exists(audio_file.file_path):
-            logger.error(f"Audio file missing from disk: {audio_file.file_path}")
-            logger.error(f"Current working directory: {os.getcwd()}")
-            logger.error(f"Audio files in directory: {os.listdir(os.path.dirname(audio_file.file_path)) if os.path.exists(os.path.dirname(audio_file.file_path)) else 'Directory does not exist'}")
-            
-            # In production, try to regenerate the audio file if it's missing
-            if os.environ.get('FLASK_ENV') == 'production':
-                logger.info("Attempting to regenerate missing audio file in production")
-                # Get the feedback and AI response to regenerate audio
-                try:
-                    feedback = Feedback.query.get(audio_file.feedback_id)
-                    if feedback and feedback.ai_response and feedback.sentiment_analysis:
-                        from app.services import FeedbackProcessor
-                        processor = FeedbackProcessor()
-                        # Try to regenerate audio
-                        audio_result = processor.speech_service.generate_emotion_aware_audio(
-                            feedback.ai_response.response_text,
-                            feedback.sentiment_analysis.to_dict(),
-                            feedback.id
-                        )
-                        if audio_result.success and os.path.exists(audio_file.file_path):
-                            logger.info("Successfully regenerated audio file")
-                        else:
-                            logger.error("Failed to regenerate audio file")
-                except Exception as e:
-                    logger.error(f"Error regenerating audio: {str(e)}")
-            
-            # If file still doesn't exist, return error
-            if not os.path.exists(audio_file.file_path):
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Audio file not available - please try again later',
-                    'code': 'FILE_MISSING'
-                }), 404
-        
-        # Security check: ensure file is within expected directory
-        if os.environ.get('FLASK_ENV') == 'production':
-            audio_dir = os.path.abspath('/tmp/audio_files')
-        else:
-            audio_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'audio_files'))
-        
-        file_path = os.path.abspath(audio_file.file_path)
-        
-        if not file_path.startswith(audio_dir):
-            logger.warning(f"Security violation: attempted access to {file_path}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Access denied',
-                'code': 'ACCESS_DENIED'
-            }), 403
-        
         download = request.args.get('download', 'false').lower() == 'true'
         
-        return send_file(
-            audio_file.file_path,
-            as_attachment=download,
-            mimetype='audio/mpeg',
-            download_name=f'feedback_{audio_file.feedback_id}_response.mp3' if download else None
-        )
+        # Try to get audio URL from Blob Storage first
+        from app.services.blob_storage import BlobStorageService
+        blob_service = BlobStorageService()
+        
+        if blob_service.is_available:
+            # Get blob content and stream it with proper headers
+            blob_result = blob_service.get_blob_content(audio_file.feedback_id)
+            
+            if blob_result.success and blob_result.data:
+                logger.info(f"Serving audio from Blob Storage for audio {audio_id}")
+                
+                # Create response with proper headers for download
+                from flask import Response
+                response = Response(
+                    blob_result.data,
+                    mimetype='audio/mpeg',
+                    headers={
+                        'Content-Length': str(len(blob_result.data)),
+                        'Accept-Ranges': 'bytes'
+                    }
+                )
+                
+                if download:
+                    response.headers['Content-Disposition'] = f'attachment; filename="feedback_{audio_file.feedback_id}_response.mp3"'
+                else:
+                    response.headers['Content-Disposition'] = 'inline'
+                
+                return response
+            else:
+                logger.warning(f"Failed to get blob content for audio {audio_id}")
+        
+        # Fallback: Try to serve from local file (development/legacy)
+        if os.path.exists(audio_file.file_path):
+            logger.info(f"Serving audio file from local storage: {audio_file.file_path}")
+            
+            # Security check: ensure file is within expected directory
+            if os.environ.get('FLASK_ENV') == 'production':
+                audio_dir = os.path.abspath('/tmp/audio_files')
+            else:
+                audio_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'audio_files'))
+            
+            file_path = os.path.abspath(audio_file.file_path)
+            
+            if not file_path.startswith(audio_dir):
+                logger.warning(f"Security violation: attempted access to {file_path}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Access denied',
+                    'code': 'ACCESS_DENIED'
+                }), 403
+            
+            return send_file(
+                audio_file.file_path,
+                as_attachment=download,
+                mimetype='audio/mpeg',
+                download_name=f'feedback_{audio_file.feedback_id}_response.mp3' if download else None
+            )
+        
+        # If no file exists anywhere, try to regenerate
+        logger.warning(f"Audio file not found in storage for {audio_id}, attempting regeneration")
+        
+        try:
+            feedback = Feedback.query.get(audio_file.feedback_id)
+            if feedback and feedback.ai_response and feedback.sentiment_analysis:
+                from app.services import FeedbackProcessor
+                processor = FeedbackProcessor()
+                
+                # Try to regenerate audio
+                audio_result = processor.speech_service.generate_emotion_aware_audio(
+                    feedback.ai_response.response_text,
+                    feedback.sentiment_analysis.to_dict(),
+                    feedback.id
+                )
+                
+                if audio_result.success:
+                    # Try again to get the URL after regeneration
+                    if blob_service.is_available:
+                        sas_url = blob_service.get_audio_url(audio_file.feedback_id, download=download)
+                        if sas_url:
+                            logger.info(f"Successfully regenerated and serving audio {audio_id}")
+                            from flask import redirect
+                            return redirect(sas_url)
+                    
+                    # Or serve from local if blob failed but local file exists
+                    if os.path.exists(audio_file.file_path):
+                        return send_file(
+                            audio_file.file_path,
+                            as_attachment=download,
+                            mimetype='audio/mpeg',
+                            download_name=f'feedback_{audio_file.feedback_id}_response.mp3' if download else None
+                        )
+        except Exception as regen_error:
+            logger.error(f"Error regenerating audio: {str(regen_error)}")
+        
+        # If all else fails
+        return jsonify({
+            'status': 'error',
+            'message': 'Audio file not available - please try again later',
+            'code': 'FILE_NOT_AVAILABLE'
+        }), 404
         
     except Exception as e:
         logger.error(f"Error serving audio file {audio_id}: {str(e)}")
