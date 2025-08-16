@@ -325,8 +325,8 @@ def dashboard_stats():
                 af.id as audio_file_id
             FROM feedback f
             LEFT JOIN sentiment_analysis s ON f.id = s.feedback_id
-            LEFT JOIN ai_response a ON f.id = a.feedback_id
-            LEFT JOIN audio_file af ON f.id = af.feedback_id
+            LEFT JOIN ai_responses a ON f.id = a.feedback_id
+            LEFT JOIN audio_files af ON f.id = af.feedback_id
             ORDER BY f.created_at DESC
             LIMIT 5
         """)
@@ -359,7 +359,7 @@ def dashboard_stats():
         return jsonify({
             'status': 'success',
             'data': {
-                'total_feedback': result.total_feedback or 0,
+                'total_feedback': total_feedback,
                 'sentiment_breakdown': sentiment_breakdown,
                 'category_breakdown': category_breakdown,
                 'recent_feedback': recent_feedback_data
