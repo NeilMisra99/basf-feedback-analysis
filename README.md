@@ -270,24 +270,24 @@ In your **GitHub repository** → Settings → Secrets and variables → Actions
 
 #### Azure Deployment Secrets:
 
-4. **AZURE_CREDENTIALS** - Service Principal JSON for Container Apps deployment
-5. **AZURE_STORAGE_CONNECTION_STRING** - Storage account connection string
+1. **AZURE_CREDENTIALS** - Service Principal JSON for Container Apps deployment
+2. **AZURE_STORAGE_CONNECTION_STRING** - Storage account connection string
 
 #### Application Environment Secrets:
 
-6. **AZURE_TEXT_ANALYTICS_KEY** - Your Text Analytics key
-7. **AZURE_TEXT_ANALYTICS_ENDPOINT** - Your Text Analytics endpoint
-8. **AZURE_SPEECH_KEY** - Your Speech service key
-9. **AZURE_SPEECH_REGION** - Your Speech service region
-10. **OPENAI_API_KEY** - Your OpenAI API key
-11. **OPENAI_MODEL** - `gpt-4o`
-12. **SECRET_KEY** - Secure random string for Flask
-13. **CORS_ORIGINS** - Your Static Web App URL
+1. **AZURE_TEXT_ANALYTICS_KEY** - Your Text Analytics key
+2. **AZURE_TEXT_ANALYTICS_ENDPOINT** - Your Text Analytics endpoint
+3. **AZURE_SPEECH_KEY** - Your Speech service key
+4. **AZURE_SPEECH_REGION** - Your Speech service region
+5. **OPENAI_API_KEY** - Your OpenAI API key
+6. **OPENAI_MODEL** - `gpt-4o`
+7. **SECRET_KEY** - Secure random string for Flask
+8. **CORS_ORIGINS** - Your Static Web App URL
 
 #### Frontend Deployment:
 
-14. **AZURE_STATIC_WEB_APPS_API_TOKEN** - Static Web App deployment token
-15. **REACT_APP_API_URL** - `https://basf-feedback-api.azurecontainerapps.io/api/v1`
+1. **AZURE_STATIC_WEB_APPS_API_TOKEN** - Static Web App deployment token
+2. **REACT_APP_API_URL** - `https://basf-feedback-api.azurecontainerapps.io/api/v1`
 
 **⚠️ Note**: Your Container App URL format is `https://[app-name].[random-string].[region].azurecontainerapps.io`
 
@@ -325,69 +325,3 @@ curl https://basf-feedback-api.[random-string].[region].azurecontainerapps.io/ap
 2. **Verify processing** - should show "Processing..." then complete
 3. **Check dashboard** - sentiment, AI response, and audio should appear
 4. **Play audio** - emotion-based voice should work
-
-### 🔧 Environment Variables Reference
-
-Our `.env.example` shows the complete structure:
-
-**Local Development:**
-
-```bash
-# Uses .env.local or .env file
-AZURE_TEXT_ANALYTICS_KEY=your-key
-REACT_APP_API_URL=http://localhost:5001/api/v1
-```
-
-**Production (Azure Container Apps):**
-
-```bash
-# Set in Azure Portal → Container App → Environment variables
-AZURE_TEXT_ANALYTICS_KEY=your-key
-CORS_ORIGINS=https://your-static-web-app.azurestaticapps.net
-```
-
-**GitHub Actions:**
-
-```bash
-# Set in GitHub → Settings → Secrets
-AZURE_CREDENTIALS=<service-principal-json>
-REACT_APP_API_URL=https://your-container-app.azurecontainerapps.io/api/v1
-```
-
-### 🚨 Troubleshooting Deployment
-
-**"CORS error" in production:**
-
-- Update `CORS_ORIGINS` in Container App environment variables
-- Ensure it matches your Static Web App URL exactly
-- Container App format: `https://[name].[random].[region].azurecontainerapps.io`
-
-**"Environment variables not found":**
-
-- Check Container App → Settings → Environment variables
-- Verify all required variables are set
-- Restart Container App after adding variables
-
-**"GitHub Actions failing":**
-
-- Verify all GitHub secrets are set correctly (especially `AZURE_CREDENTIALS`)
-- Check Actions tab for detailed error logs
-- Ensure service principal has Contributor role on resource group
-
-**"Container deployment failing":**
-
-- Check Container Registry access keys are correct
-- Verify Docker image builds successfully
-- Check Container App logs for runtime errors
-
-**"Audio files not working":**
-
-- Verify `AZURE_STORAGE_CONNECTION_STRING` is set correctly
-- Check Blob Storage container `audio-files` exists
-- Ensure Container App has network access to Storage Account
-
-**"Static Web App not updating":**
-
-- Check deployment status in Azure Portal
-- Verify GitHub connection is active
-- Check build logs in GitHub Actions
