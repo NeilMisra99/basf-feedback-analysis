@@ -14,7 +14,7 @@ export interface Feedback {
 export interface SentimentAnalysis {
   id: string;
   feedback_id: string;
-  sentiment: "positive" | "negative" | "neutral" | "mixed";
+  sentiment: "positive" | "negative" | "neutral";
   confidence_score: number;
   processed_at: string;
 }
@@ -53,7 +53,6 @@ export interface DashboardStats {
     positive?: number;
     negative?: number;
     neutral?: number;
-    mixed?: number;
   };
   recent_feedback: Feedback[];
 }

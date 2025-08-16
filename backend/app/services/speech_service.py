@@ -137,7 +137,6 @@ class AzureSpeechService(BaseExternalService):
         voice_mapping = {
             'positive': 'en-US-JennyNeural',    # Supports: cheerful, excited, friendly, hopeful
             'negative': 'en-US-AriaNeural',     # Using AriaNeural for negative to avoid slowness
-            'mixed': 'en-US-GuyNeural',         # Male voice for mixed sentiment - professional balance
             'neutral': 'en-US-AriaNeural'       # Supports: assistant, chat, newscast
         }
         return voice_mapping.get(sentiment, voice_mapping['neutral'])
@@ -155,14 +154,6 @@ class AzureSpeechService(BaseExternalService):
                 return 'empathetic'  # Understanding and caring
             else:
                 return 'calm'  # Gentle, composed response to mild negativity
-        elif sentiment == 'mixed':
-            # Mixed sentiment with GuyNeural - using supported styles for balanced approach
-            if confidence > 0.7:
-                return 'newscast'  # High confidence mixed - professional, balanced tone
-            elif confidence > 0.5:
-                return 'friendly'  # Medium confidence mixed - approachable, engaging
-            else:
-                return 'hopeful'  # Low confidence mixed - optimistic, adaptable
         else:
             # Neutral sentiment - AriaNeural supports multiple neutral styles
             if confidence > 0.7:

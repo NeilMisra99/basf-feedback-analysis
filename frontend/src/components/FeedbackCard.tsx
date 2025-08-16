@@ -10,11 +10,11 @@ import {
   Smile,
   Frown,
   Meh,
-  Minus,
   ChevronDown,
   ChevronUp,
   AlertCircle,
   CheckCircle,
+  Download,
 } from "lucide-react";
 import type { Feedback } from "../types";
 import { feedbackAPI } from "../services/api";
@@ -57,8 +57,6 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
         return <Smile className="h-4 w-4" />;
       case "negative":
         return <Frown className="h-4 w-4" />;
-      case "mixed":
-        return <Minus className="h-4 w-4" />;
       default:
         return <Meh className="h-4 w-4" />;
     }
@@ -70,8 +68,6 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
         return "bg-green-100 text-green-800 border-green-200";
       case "negative":
         return "bg-red-100 text-red-800 border-red-200";
-      case "mixed":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -222,7 +218,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
           {/* Audio Player - only show when processing is completed */}
           {feedback.audio_file &&
             feedback.processing_status === "completed" && (
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex gap-2">
                 <Button
                   onClick={toggleAudio}
                   disabled={audioLoading}
@@ -242,6 +238,22 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
                     : isCurrentlyPlaying
                       ? "Pause"
                       : "Play"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (feedback.audio_file) {
+                      const audioUrl =
+                        feedbackAPI.getAudioUrl(feedback.audio_file.id) +
+                        "?download=true";
+                      window.open(audioUrl, "_blank");
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
                 </Button>
               </div>
             )}

@@ -82,26 +82,26 @@ class AzureTextAnalyticsService(BaseExternalService):
     
     def _build_sentiment_data(self, doc, key_phrases: list) -> Dict[str, Any]:
         """Build comprehensive sentiment data from Azure response."""
-        # Calculate confidence score - Azure doesn't provide confidence for mixed sentiment
-        if doc.sentiment == 'mixed':
-            # For mixed sentiment, calculate confidence based on the strength of conflicting sentiments
-            # Higher confidence when both positive and negative are strong and neutral is low
-            pos_score = doc.confidence_scores.positive
-            neg_score = doc.confidence_scores.negative
-            neutral_score = doc.confidence_scores.neutral
-            
-            # Mixed confidence = how balanced and strong the conflicting sentiments are
-            # High when both pos/neg are significant, low when one dominates or neutral is high
-            balance_factor = 1 - abs(pos_score - neg_score)  # Higher when more balanced
-            strength_factor = pos_score + neg_score  # Higher when both are strong
-            mixed_factor = 1 - neutral_score  # Higher when neutral is low
-            
-            confidence_score = (balance_factor * strength_factor * mixed_factor)
-        else:
-            confidence_score = getattr(doc.confidence_scores, doc.sentiment, 0.0)
+        # Handle mixed sentiment by mapping to dominant sentiment based on confidence scores
+        original_sentiment = doc.sentiment
+        final_sentiment = original_sentiment
+        
+        if original_sentiment == 'mixed':
+            # For mixed sentiment, choose the dominant sentiment (highest confidence score)
+            scores = {
+                'positive': doc.confidence_scores.positive,
+                'negative': doc.confidence_scores.negative,
+                'neutral': doc.confidence_scores.neutral
+            }
+            # Get the sentiment with highest confidence score
+            final_sentiment = max(scores, key=scores.get)
+            logger.info(f"Mixed sentiment detected, mapped to {final_sentiment} based on confidence scores: {scores}")
+        
+        # Calculate confidence score for the final sentiment
+        confidence_score = getattr(doc.confidence_scores, final_sentiment, 0.0)
         
         sentiment_data = {
-            'sentiment': doc.sentiment,
+            'sentiment': final_sentiment,
             'confidence_score': confidence_score,
             'confidence_scores': {
                 'positive': doc.confidence_scores.positive,
@@ -156,11 +156,7 @@ class AzureTextAnalyticsService(BaseExternalService):
         positive_count = sum(1 for word in positive_words if word in text_lower)
         negative_count = sum(1 for word in negative_words if word in text_lower)
         
-        if positive_count > 0 and negative_count > 0:
-            # Both positive and negative words present - mixed sentiment
-            sentiment = 'mixed'
-            confidence = 0.7
-        elif positive_count > negative_count:
+        if positive_count > negative_count:
             sentiment = 'positive'
             confidence = 0.8
         elif negative_count > positive_count:
@@ -176,8 +172,7 @@ class AzureTextAnalyticsService(BaseExternalService):
             'confidence_scores': {
                 'positive': confidence if sentiment == 'positive' else 0.3,
                 'neutral': confidence if sentiment == 'neutral' else 0.3,
-                'negative': confidence if sentiment == 'negative' else 0.3,
-                'mixed': confidence if sentiment == 'mixed' else 0.3
+                'negative': confidence if sentiment == 'negative' else 0.3
             },
             'key_phrases': [],
             'opinions': [],

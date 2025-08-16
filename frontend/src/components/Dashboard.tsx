@@ -5,7 +5,6 @@ import {
   MessageSquare,
   TrendingUp,
   TrendingDown,
-  Minus,
   RefreshCw,
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
@@ -132,7 +131,7 @@ export default function Dashboard() {
       {/* Statistics Overview - Fixed at top */}
       {stats && (
         <div className="flex-shrink-0 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Total Feedback */}
             <Card className="p-4 shadow-none">
               <div className="flex items-center justify-between">
@@ -173,21 +172,6 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <TrendingDown className="h-5 w-5 text-red-600" />
-              </div>
-            </Card>
-
-            {/* Mixed Sentiment */}
-            <Card className="p-4 shadow-none">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Mixed
-                  </p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {stats.sentiment_breakdown.mixed || 0}
-                  </p>
-                </div>
-                <Minus className="h-5 w-5 text-yellow-600" />
               </div>
             </Card>
           </div>
