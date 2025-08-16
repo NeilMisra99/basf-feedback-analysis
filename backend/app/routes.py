@@ -243,14 +243,45 @@ def get_audio(audio_id):
         # Validate file existence and security
         if not os.path.exists(audio_file.file_path):
             logger.error(f"Audio file missing from disk: {audio_file.file_path}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Audio file not available',
-                'code': 'FILE_MISSING'
-            }), 404
+            logger.error(f"Current working directory: {os.getcwd()}")
+            logger.error(f"Audio files in directory: {os.listdir(os.path.dirname(audio_file.file_path)) if os.path.exists(os.path.dirname(audio_file.file_path)) else 'Directory does not exist'}")
+            
+            # In production, try to regenerate the audio file if it's missing
+            if os.environ.get('FLASK_ENV') == 'production':
+                logger.info("Attempting to regenerate missing audio file in production")
+                # Get the feedback and AI response to regenerate audio
+                try:
+                    feedback = Feedback.query.get(audio_file.feedback_id)
+                    if feedback and feedback.ai_response and feedback.sentiment_analysis:
+                        from app.services import FeedbackProcessor
+                        processor = FeedbackProcessor()
+                        # Try to regenerate audio
+                        audio_result = processor.speech_service.generate_emotion_aware_audio(
+                            feedback.ai_response.response_text,
+                            feedback.sentiment_analysis.to_dict(),
+                            feedback.id
+                        )
+                        if audio_result.success and os.path.exists(audio_file.file_path):
+                            logger.info("Successfully regenerated audio file")
+                        else:
+                            logger.error("Failed to regenerate audio file")
+                except Exception as e:
+                    logger.error(f"Error regenerating audio: {str(e)}")
+            
+            # If file still doesn't exist, return error
+            if not os.path.exists(audio_file.file_path):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Audio file not available - please try again later',
+                    'code': 'FILE_MISSING'
+                }), 404
         
         # Security check: ensure file is within expected directory
-        audio_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'audio_files'))
+        if os.environ.get('FLASK_ENV') == 'production':
+            audio_dir = os.path.abspath('/tmp/audio_files')
+        else:
+            audio_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'audio_files'))
+        
         file_path = os.path.abspath(audio_file.file_path)
         
         if not file_path.startswith(audio_dir):

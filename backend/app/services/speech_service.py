@@ -59,8 +59,14 @@ class AzureSpeechService(BaseExternalService):
             # Create SSML with emotion adaptation
             ssml = self._create_emotion_ssml(text, sentiment, confidence)
             
-            # Create audio file path
-            audio_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'audio_files')
+            # Create audio file path - use absolute path for production
+            if os.environ.get('FLASK_ENV') == 'production':
+                # In production, use a writable directory
+                audio_dir = os.path.join('/tmp', 'audio_files')
+            else:
+                # In development, use project directory
+                audio_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'audio_files')
+            
             os.makedirs(audio_dir, exist_ok=True)
             audio_path = os.path.join(audio_dir, f'{feedback_id}.mp3')
             
@@ -79,6 +85,9 @@ class AzureSpeechService(BaseExternalService):
                 file_size = os.path.getsize(audio_path) if os.path.exists(audio_path) else 0
                 
                 logger.info(f"Audio generated successfully: {audio_path} ({file_size} bytes)")
+                logger.info(f"Audio directory: {audio_dir}")
+                logger.info(f"Environment: {os.environ.get('FLASK_ENV', 'development')}")
+                logger.info(f"File exists check: {os.path.exists(audio_path)}")
                 
                 audio_data = {
                     'file_path': audio_path,
@@ -91,6 +100,16 @@ class AzureSpeechService(BaseExternalService):
                 return ServiceResponse(
                     success=True,
                     data=audio_data,
+                    service_used="azure_speech"
+                )
+            elif result.reason == speechsdk.ResultReason.Canceled:
+                cancellation_details = speechsdk.CancellationDetails(result)
+                logger.error(f"Speech synthesis canceled: {cancellation_details.reason}")
+                if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                    logger.error(f"Error details: {cancellation_details.error_details}")
+                return ServiceResponse(
+                    success=False,
+                    error=f"Speech synthesis canceled: {cancellation_details.reason}",
                     service_used="azure_speech"
                 )
             else:
