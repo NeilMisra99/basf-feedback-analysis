@@ -21,9 +21,10 @@ class Feedback(db.Model):
     ai_response = db.relationship('AIResponse', backref='feedback', uselist=False, lazy='select')
     audio_file = db.relationship('AudioFile', backref='feedback', uselist=False, lazy='select')
     
-    # Composite index for common query patterns
+    # Composite indexes for common query patterns
     __table_args__ = (
         Index('idx_feedback_created_category', 'created_at', 'category'),
+        Index('idx_feedback_status_created', 'processing_status', 'created_at'),  # For filtering by status and sorting
     )
     
     def to_dict(self):
@@ -40,10 +41,15 @@ class SentimentAnalysis(db.Model):
     __tablename__ = 'sentiment_analysis'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True)  # Ensure one-to-one
+    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
     sentiment = db.Column(db.String(20), nullable=False, index=True)  # Add index for grouping
     confidence_score = db.Column(db.Float)
     processed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Composite index for dashboard query optimization
+    __table_args__ = (
+        Index('idx_sentiment_feedback_sentiment', 'feedback_id', 'sentiment'),
+    )
     
     def to_dict(self):
         return {
@@ -58,7 +64,7 @@ class AIResponse(db.Model):
     __tablename__ = 'ai_responses'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True)  # Ensure one-to-one
+    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
     response_text = db.Column(db.Text, nullable=False)
     model_used = db.Column(db.String(50), index=True)  # Add index for analytics
     generated_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -76,7 +82,7 @@ class AudioFile(db.Model):
     __tablename__ = 'audio_files'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True)  # Ensure one-to-one
+    feedback_id = db.Column(db.String(36), db.ForeignKey('feedback.id'), nullable=False, unique=True, index=True)  # Index for JOINs
     file_path = db.Column(db.String(255), nullable=False, unique=True)  # Prevent duplicate files
     duration_seconds = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)

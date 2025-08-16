@@ -281,66 +281,88 @@ def get_audio(audio_id):
 @api_bp.route('/dashboard/stats', methods=['GET'])
 def dashboard_stats():
     try:
-        # Single optimized query for all stats using subqueries
-        from sqlalchemy import and_, func
+        from sqlalchemy import text
         
-        # Get basic counts in one query
-        stats_query = db.session.query(
-            func.count(Feedback.id).label('total_feedback')
-        ).first()
+        # Optimized approach: Use a single connection for all queries
+        # and fetch only necessary columns
         
-        total_feedback = stats_query.total_feedback
+        # Get total count (very fast single row query)
+        total_feedback = db.session.execute(
+            text("SELECT COUNT(*) as count FROM feedback")
+        ).scalar() or 0
         
-        # Quick sentiment breakdown (only for completed feedback)
-        sentiment_stats = db.session.query(
-            SentimentAnalysis.sentiment,
-            func.count(SentimentAnalysis.id)
-        ).join(Feedback).filter(
-            Feedback.processing_status == 'completed'
-        ).group_by(SentimentAnalysis.sentiment).all()
+        # Get sentiment breakdown in one efficient query
+        sentiment_results = db.session.execute(
+            text("""
+                SELECT s.sentiment, COUNT(*) as count
+                FROM sentiment_analysis s
+                JOIN feedback f ON f.id = s.feedback_id
+                WHERE f.processing_status = 'completed'
+                GROUP BY s.sentiment
+            """)
+        ).fetchall()
         
-        sentiment_breakdown = {sentiment: count for sentiment, count in sentiment_stats}
+        sentiment_breakdown = {row.sentiment: row.count for row in sentiment_results}
         
-        # Quick category breakdown
-        category_stats = db.session.query(
-            Feedback.category,
-            func.count(Feedback.id)
-        ).group_by(Feedback.category).all()
+        # Get category breakdown (fast aggregation)
+        category_results = db.session.execute(
+            text("""
+                SELECT COALESCE(category, 'uncategorized') as category, COUNT(*) as count
+                FROM feedback
+                GROUP BY category
+            """)
+        ).fetchall()
         
-        category_breakdown = {category or 'uncategorized': count for category, count in category_stats}
+        category_breakdown = {row.category: row.count for row in category_results}
         
-        # Lightweight recent feedback (minimal data, no heavy joins)
-        recent_feedback_query = db.session.query(
-            Feedback.id,
-            Feedback.text,
-            Feedback.category,
-            Feedback.created_at,
-            Feedback.processing_status
-        ).order_by(Feedback.created_at.desc()).limit(5).all()
+        # Get recent feedback with minimal data - only load what's displayed
+        # Use a targeted query with specific columns instead of full ORM objects
+        recent_sql = text("""
+            SELECT 
+                f.id, f.text, f.category, f.created_at, f.processing_status,
+                s.sentiment, s.confidence_score,
+                a.response_text,
+                af.id as audio_file_id
+            FROM feedback f
+            LEFT JOIN sentiment_analysis s ON f.id = s.feedback_id
+            LEFT JOIN ai_response a ON f.id = a.feedback_id
+            LEFT JOIN audio_file af ON f.id = af.feedback_id
+            ORDER BY f.created_at DESC
+            LIMIT 5
+        """)
         
-        # Build lightweight feedback data
-        recent_feedback = []
-        for fb in recent_feedback_query:
-            recent_feedback.append({
-                'id': fb.id,
-                'text': fb.text,
-                'category': fb.category,
-                'created_at': fb.created_at.isoformat(),
-                'processing_status': fb.processing_status,
-                # Skip heavy related data for dashboard - SSE will update with full data when needed
-                'sentiment_analysis': None,
-                'ai_response': None,
-                'audio_file': None,
-                'audio_url': None
-            })
+        recent_results = db.session.execute(recent_sql).fetchall()
+        
+        # Build lightweight response with only necessary data
+        recent_feedback_data = []
+        for row in recent_results:
+            feedback_item = {
+                'id': row.id,
+                'text': row.text,
+                'category': row.category,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+                'processing_status': row.processing_status,
+                'sentiment_analysis': {
+                    'sentiment': row.sentiment,
+                    'confidence_score': row.confidence_score
+                } if row.sentiment else None,
+                'ai_response': {
+                    'response_text': row.response_text
+                } if row.response_text else None,
+                'audio_file': {
+                    'id': row.audio_file_id
+                } if row.audio_file_id else None,
+                'audio_url': f'/api/v1/audio/{row.audio_file_id}' if row.audio_file_id else None
+            }
+            recent_feedback_data.append(feedback_item)
         
         return jsonify({
             'status': 'success',
             'data': {
-                'total_feedback': total_feedback,
+                'total_feedback': result.total_feedback or 0,
                 'sentiment_breakdown': sentiment_breakdown,
                 'category_breakdown': category_breakdown,
-                'recent_feedback': recent_feedback
+                'recent_feedback': recent_feedback_data
             }
         })
         
