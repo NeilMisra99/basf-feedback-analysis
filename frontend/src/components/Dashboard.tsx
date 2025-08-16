@@ -8,7 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
-import { sseService, type SSEEvent } from "../services/sseService";
+import { useFeedback } from "../contexts/FeedbackContext";
 import type { Feedback, DashboardStats } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import { DashboardSkeleton } from "./ui/loading";
@@ -18,6 +18,9 @@ export default function Dashboard() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use feedback context for real-time updates
+  const { latestFeedback, refreshTrigger } = useFeedback();
 
   const loadDashboardData = async () => {
     try {
@@ -48,59 +51,38 @@ export default function Dashboard() {
     }
   };
 
+  // Load data on mount
   useEffect(() => {
     loadDashboardData();
-  }, []); // Only run once on mount
+  }, []);
 
-  // Setup SSE connection for real-time updates - delay until initial load is complete
+  // Handle real-time feedback updates
   useEffect(() => {
-    // Only start SSE after initial load is complete
-    if (loading) return;
-    const handleSSEEvent = (event: SSEEvent) => {
-      switch (event.type) {
-        case "feedback_update":
-          if (event.data) {
-            setFeedback((prevFeedback) => {
-              const existingIndex = prevFeedback.findIndex(
-                (f) => f.id === event.data!.id
-              );
+    if (latestFeedback) {
+      setFeedback((prevFeedback) => {
+        const existingIndex = prevFeedback.findIndex(
+          (f) => f.id === latestFeedback.id
+        );
 
-              if (existingIndex >= 0) {
-                // Update existing feedback
-                const updated = [...prevFeedback];
-                updated[existingIndex] = event.data!;
-                return updated;
-              } else {
-                // Add new feedback (insert at beginning to maintain chronological order)
-                return [event.data!, ...prevFeedback.slice(0, 4)]; // Keep only 5 most recent
-              }
-            });
+        if (existingIndex >= 0) {
+          // Update existing feedback
+          const updated = [...prevFeedback];
+          updated[existingIndex] = latestFeedback;
+          return updated;
+        } else {
+          // Add new feedback (insert at beginning to maintain chronological order)
+          return [latestFeedback, ...prevFeedback.slice(0, 4)]; // Keep only 5 most recent
+        }
+      });
+    }
+  }, [latestFeedback]);
 
-            // Update stats if needed
-            if (event.data.processing_status === "completed") {
-              // Refresh stats when feedback processing completes
-              loadDashboardData();
-            }
-          }
-          break;
-        case "connected":
-          break;
-        case "heartbeat":
-          // SSE connection is alive
-          break;
-      }
-    };
-
-    // Connect to SSE and add event listener
-    sseService.connect();
-    const removeListener = sseService.addEventListener(handleSSEEvent);
-
-    // Cleanup on unmount
-    return () => {
-      removeListener();
-      sseService.disconnect();
-    };
-  }, [loading]); // Only dependency is loading state
+  // Refresh data when context triggers refresh (for stats update)
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      loadDashboardData();
+    }
+  }, [refreshTrigger]);
 
   if (loading) {
     return <DashboardSkeleton />;
