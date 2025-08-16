@@ -33,8 +33,8 @@ class Feedback(db.Model):
             'text': self.text,
             'category': self.category,
             'processing_status': self.processing_status,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.replace(tzinfo=timezone.utc).isoformat() if self.updated_at else None,
         }
 
 class SentimentAnalysis(db.Model):
@@ -99,5 +99,5 @@ class AudioFile(db.Model):
             'duration_seconds': self.duration_seconds,
             'file_size': self.file_size,
             'storage_type': self.storage_type,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat() if self.created_at else None,
         }

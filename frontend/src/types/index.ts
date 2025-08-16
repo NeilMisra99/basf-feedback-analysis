@@ -56,3 +56,20 @@ export interface DashboardStats {
   };
   recent_feedback: Feedback[];
 }
+
+export interface PaginationInfo {
+  page: number;
+  pages: number;
+  per_page: number;
+  total: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface PaginatedFeedbackResponse {
+  data: Feedback[];
+  pagination: PaginationInfo;
+  filters?: {
+    category?: string;
+  };
+}

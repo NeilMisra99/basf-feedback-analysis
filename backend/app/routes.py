@@ -14,6 +14,7 @@ import logging
 import json
 import time
 import re
+from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -363,7 +364,7 @@ def dashboard_stats():
             created_at_iso = None
             if row.created_at:
                 if hasattr(row.created_at, 'isoformat'):
-                    created_at_iso = row.created_at.isoformat()
+                    created_at_iso = row.created_at.replace(tzinfo=timezone.utc).isoformat()
                 else:
                     # If it's already a string from SQLite, use it directly
                     created_at_iso = str(row.created_at)

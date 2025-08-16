@@ -1,8 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 export const FeedbackCardSkeleton = () => (
-  <div className="transition-colors rounded-lg shadow-none border">
+  <div className="transition-colors rounded-lg shadow-none border bg-white">
     <div className="px-4 py-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -40,7 +39,8 @@ export const FeedbackCardSkeleton = () => (
           </div>
         </div>
 
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex gap-2">
+          <Skeleton className="h-8 w-16 rounded-md" />
           <Skeleton className="h-8 w-16 rounded-md" />
         </div>
       </div>
@@ -153,9 +153,7 @@ export const DashboardSkeleton = () => (
     </div>
 
     <div className="flex-shrink-0 flex justify-center mt-6 pt-4">
-      <div className="bg-gray-50 rounded-md p-2 shadow-sm border">
-        <Skeleton className="h-9 w-24" />
-      </div>
+      <Skeleton className="h-9 w-24" />
     </div>
   </div>
 );

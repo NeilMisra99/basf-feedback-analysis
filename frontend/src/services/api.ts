@@ -4,6 +4,7 @@ import type {
   FeedbackSubmission,
   APIResponse,
   DashboardStats,
+  PaginatedFeedbackResponse,
 } from "../types";
 
 // Enhanced error type for better error handling
@@ -45,13 +46,11 @@ export const feedbackAPI = {
   // Get all feedback with pagination
   getAllFeedback: async (
     page = 1,
-    perPage = 10
-  ): Promise<
-    APIResponse<{ feedback: Feedback[]; total: number; page: number }>
-  > => {
-    const response = await api.get<
-      APIResponse<{ feedback: Feedback[]; total: number; page: number }>
-    >(`/feedback?page=${page}&per_page=${perPage}`);
+    perPage = 5
+  ): Promise<PaginatedFeedbackResponse & { status: string; message?: string }> => {
+    const response = await api.get<PaginatedFeedbackResponse & { status: string; message?: string }>(
+      `/feedback?page=${page}&per_page=${perPage}`
+    );
     return response.data;
   },
 

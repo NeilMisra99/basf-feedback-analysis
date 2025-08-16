@@ -113,9 +113,9 @@ class QueryValidator:
             page = 1
         
         try:
-            per_page = max(1, min(int(per_page), 100)) if per_page else 10
+            per_page = max(1, min(int(per_page), 100)) if per_page else 5
         except (ValueError, TypeError):
-            per_page = 10
+            per_page = 5
         
         return page, per_page
     

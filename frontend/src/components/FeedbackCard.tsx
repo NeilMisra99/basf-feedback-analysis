@@ -14,7 +14,11 @@ import {
 import type { Feedback } from "../types";
 import { feedbackAPI } from "../services/api";
 import { audioManager, type AudioState } from "../services/audioManager";
-import { getSentimentIcon, getSentimentClassNames, formatConfidenceScore } from "../lib/sentimentUtils";
+import {
+  getSentimentIcon,
+  getSentimentClassNames,
+  formatConfidenceScore,
+} from "../lib/sentimentUtils";
 import { getAudioButtonState, getAudioButtonLabel } from "../lib/audioUtils";
 import { getProcessingStatusDisplay } from "../lib/processingUtils";
 
@@ -35,7 +39,10 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
   useEffect(() => {
     const unsubscribe = audioManager.subscribe((state: AudioState) => {
       setAudioState(state);
-      if (state.feedbackId === feedback.id || (state.isPlaying && state.feedbackId !== feedback.id)) {
+      if (
+        state.feedbackId === feedback.id ||
+        (state.isPlaying && state.feedbackId !== feedback.id)
+      ) {
         setAudioLoading(false);
       }
     });
@@ -43,7 +50,11 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
     return unsubscribe;
   }, [feedback.id]);
 
-  const audioButtonState = getAudioButtonState(feedback.id, audioState, audioLoading);
+  const audioButtonState = getAudioButtonState(
+    feedback.id,
+    audioState,
+    audioLoading
+  );
   const isCurrentlyPlaying = audioButtonState.isPlaying;
 
   const toggleAudio = async () => {
@@ -69,13 +80,16 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
     return new Date(dateString).toLocaleString();
   };
 
-  const processingStatusDisplay = getProcessingStatusDisplay(feedback.processing_status as "processing" | "completed" | "failed");
+  const processingStatusDisplay = getProcessingStatusDisplay(
+    feedback.processing_status as "processing" | "completed" | "failed"
+  );
 
   const maxLength = 200;
   const shouldShowExpand = feedback.text.length > maxLength;
-  const displayText = shouldShowExpand && !isExpanded 
-    ? `${feedback.text.substring(0, maxLength)}...` 
-    : feedback.text;
+  const displayText =
+    shouldShowExpand && !isExpanded
+      ? `${feedback.text.substring(0, maxLength)}...`
+      : feedback.text;
 
   return (
     <Card className="transition-colors rounded-lg shadow-none">
@@ -85,11 +99,9 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
             <div className="flex items-center gap-2 mb-2">
               <Badge className="bg-white text-black">{feedback.category}</Badge>
               {processingStatusDisplay && (
-                <Badge
-                  className={`gap-1 ${processingStatusDisplay.className}`}
-                >
-                  <processingStatusDisplay.icon 
-                    className={`h-4 w-4 ${feedback.processing_status === 'processing' ? 'animate-spin' : ''}`} 
+                <Badge className={`gap-1 ${processingStatusDisplay.className}`}>
+                  <processingStatusDisplay.icon
+                    className={`h-4 w-4 ${feedback.processing_status === "processing" ? "animate-spin" : ""}`}
                   />
                   {processingStatusDisplay.text}
                 </Badge>
@@ -126,72 +138,76 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
             </div>
 
             {feedback.sentiment_analysis && isProcessingCompleted && (
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge
-                    className={`gap-1 ${getSentimentClassNames(
+              <div className="flex items-center gap-2 mb-2">
+                <Badge
+                  className={`gap-1 ${getSentimentClassNames(
+                    feedback.sentiment_analysis.sentiment
+                  )}`}
+                >
+                  {(() => {
+                    const IconComponent = getSentimentIcon(
                       feedback.sentiment_analysis.sentiment
-                    )}`}
-                  >
-                    {(() => {
-                      const IconComponent = getSentimentIcon(feedback.sentiment_analysis.sentiment);
-                      return <IconComponent className="h-4 w-4" />;
-                    })()}
-                    {feedback.sentiment_analysis.sentiment}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {formatConfidenceScore(feedback.sentiment_analysis.confidence_score)}
-                  </span>
-                </div>
-              )}
+                    );
+                    return <IconComponent className="h-4 w-4" />;
+                  })()}
+                  {feedback.sentiment_analysis.sentiment}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {formatConfidenceScore(
+                    feedback.sentiment_analysis.confidence_score
+                  )}
+                </span>
+              </div>
+            )}
 
             {feedback.ai_response && isProcessingCompleted && (
-                <div className="rounded-lg p-2 bg-gray-50">
-                  <h4 className="text-sm font-medium text-foreground mb-1">
-                    AI Response
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {feedback.ai_response.response_text}
-                  </p>
-                </div>
-              )}
+              <div className="rounded-lg p-2 bg-gray-50">
+                <h4 className="text-sm font-medium text-foreground mb-1">
+                  AI Response
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {feedback.ai_response.response_text}
+                </p>
+              </div>
+            )}
           </div>
 
           {feedback.audio_file && isProcessingCompleted && (
-              <div className="flex-shrink-0 flex gap-2">
-                <Button
-                  onClick={toggleAudio}
-                  disabled={audioLoading}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  {audioLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isCurrentlyPlaying ? (
-                    <Pause className="h-4 w-4" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  {getAudioButtonLabel(audioButtonState)}
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (feedback.audio_file) {
-                      const audioUrl =
-                        feedbackAPI.getAudioUrl(feedback.audio_file.id) +
-                        "?download=true";
-                      window.open(audioUrl, "_blank");
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-              </div>
-            )}
+            <div className="flex-shrink-0 flex gap-2">
+              <Button
+                onClick={toggleAudio}
+                disabled={audioLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2 !shadow-none"
+              >
+                {audioLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isCurrentlyPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                {getAudioButtonLabel(audioButtonState)}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (feedback.audio_file) {
+                    const audioUrl =
+                      feedbackAPI.getAudioUrl(feedback.audio_file.id) +
+                      "?download=true";
+                    window.open(audioUrl, "_blank");
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-2 !shadow-none"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

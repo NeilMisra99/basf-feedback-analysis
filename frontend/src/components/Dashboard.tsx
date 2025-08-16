@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import {
   MessageSquare,
   TrendingUp,
@@ -9,80 +10,113 @@ import {
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
 import { useFeedback } from "../contexts/FeedbackContext";
-import type { Feedback, DashboardStats } from "../types";
+import type { Feedback, DashboardStats, PaginationInfo } from "../types";
 import FeedbackCard from "./FeedbackCard";
-import { DashboardSkeleton } from "./ui/loading";
+import {
+  DashboardSkeleton,
+  FeedbackCardSkeleton,
+  StatCardSkeleton,
+} from "./ui/loading";
 import { getErrorMessageWithFallback } from "../lib/errorUtils";
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
-  // Use feedback context for real-time updates
+  // Pagination state
+  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+
+  // Real-time updates
+  const [processedFeedbackIds, setProcessedFeedbackIds] = useState<Set<string>>(
+    new Set()
+  );
   const { latestFeedback, refreshTrigger } = useFeedback();
 
-  const loadDashboardData = async () => {
+  const loadDashboardStats = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setStatsLoading(true);
+      setStatsError(null);
 
       const statsResponse = await feedbackAPI.getDashboardStats();
-
       if (statsResponse.status === "success" && statsResponse.data) {
         setStats(statsResponse.data);
-        setFeedback(statsResponse.data.recent_feedback || []);
       } else {
         throw new Error(
-          statsResponse.message || "Failed to load dashboard data"
+          statsResponse.message || "Failed to load dashboard stats"
         );
       }
     } catch (err: unknown) {
-      setError(
-        getErrorMessageWithFallback(err, "Failed to load dashboard data")
+      setStatsError(
+        getErrorMessageWithFallback(err, "Failed to load dashboard stats")
       );
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
     }
   };
 
+  const loadFeedback = async (page: number = 1) => {
+    try {
+      setFeedbackLoading(true);
+      setFeedbackError(null);
+      setPagination(null); // Clear pagination during loading
+
+      const response = await feedbackAPI.getAllFeedback(page, 5);
+      if (response.status === "success") {
+        // Backend returns { status, data: [...], pagination: {...} }
+        setFeedback(response.data || []); // Ensure we always have an array
+        setPagination(response.pagination || null);
+        setCurrentPage(page);
+      } else {
+        throw new Error(response.message || "Failed to load feedback");
+      }
+    } catch (err: unknown) {
+      setFeedbackError(
+        getErrorMessageWithFallback(err, "Failed to load feedback")
+      );
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    loadFeedback(page);
+  };
+
+  const handleRefresh = () => {
+    loadDashboardStats();
+    loadFeedback(currentPage);
+    setProcessedFeedbackIds(new Set());
+  };
+
+  // Load data on mount and refresh
   useEffect(() => {
-    // Initial load or refresh trigger
     if (refreshTrigger >= 0) {
-      loadDashboardData();
+      loadDashboardStats();
+      loadFeedback(1);
     }
   }, [refreshTrigger]);
 
-  // Optimized real-time feedback updates
+  // Handle real-time feedback updates via SSE
   useEffect(() => {
-    if (!latestFeedback || loading) return;
+    if (!latestFeedback || processedFeedbackIds.has(latestFeedback.id)) return;
 
-    setFeedback((prevFeedback) => {
-      const existingIndex = prevFeedback.findIndex(
-        (f) => f.id === latestFeedback.id
-      );
+    // Mark this feedback as processed to avoid duplicates
+    setProcessedFeedbackIds((prev) => new Set(prev).add(latestFeedback.id));
 
-      if (existingIndex >= 0) {
-        // Update existing feedback
-        const updated = [...prevFeedback];
-        updated[existingIndex] = latestFeedback;
-        return updated;
-      } else {
-        // Add new feedback, keep max 5 items
-        return [latestFeedback, ...prevFeedback.slice(0, 4)];
-      }
-    });
-
-    // Update stats if feedback is completed
+    // Update stats if we have them and feedback is completed
     if (
       latestFeedback.processing_status === "completed" &&
-      latestFeedback.sentiment_analysis
+      latestFeedback.sentiment_analysis &&
+      stats
     ) {
       setStats((prevStats) => {
         if (!prevStats) return prevStats;
 
-        // Increment total and sentiment counts
         const sentiment = latestFeedback.sentiment_analysis!.sentiment;
         return {
           ...prevStats,
@@ -94,13 +128,15 @@ export default function Dashboard() {
         };
       });
     }
-  }, [latestFeedback, loading]);
 
-  if (loading) {
+    // Feedback processed - stats already updated above
+  }, [latestFeedback, stats, processedFeedbackIds]);
+
+  if (statsLoading && (!feedback || feedback.length === 0)) {
     return <DashboardSkeleton />;
   }
 
-  if (error) {
+  if (statsError && !stats) {
     return (
       <Card className="max-w-2xl mx-auto shadow-none">
         <CardContent className="pt-6">
@@ -108,9 +144,9 @@ export default function Dashboard() {
             <div className="text-destructive mb-4">
               <MessageSquare className="h-12 w-12 mx-auto mb-2" />
               <h3 className="text-lg font-medium">Error Loading Dashboard</h3>
-              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+              <p className="text-sm text-muted-foreground mt-1">{statsError}</p>
             </div>
-            <Button onClick={loadDashboardData} variant="outline">
+            <Button onClick={handleRefresh} variant="outline">
               <RefreshCw className="mr-2 h-4 w-4" />
               Try Again
             </Button>
@@ -122,60 +158,100 @@ export default function Dashboard() {
 
   return (
     <div className="h-full flex flex-col">
-      {stats && (
-        <div className="flex-shrink-0 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="p-4 shadow-none">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Feedback
-                  </p>
-                  <p className="text-2xl font-bold">{stats.total_feedback}</p>
+      {/* Stats Cards */}
+      <div className="flex-shrink-0 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {statsLoading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : stats ? (
+            <>
+              <Card className="p-4 shadow-none">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total Feedback
+                    </p>
+                    <p className="text-2xl font-bold">{stats.total_feedback}</p>
+                  </div>
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </Card>
+              </Card>
 
-            <Card className="p-4 shadow-none">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Positive
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {stats.sentiment_breakdown.positive || 0}
-                  </p>
+              <Card className="p-4 shadow-none">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Positive
+                    </p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {stats.sentiment_breakdown.positive || 0}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
-            </Card>
+              </Card>
 
-            <Card className="p-4 shadow-none">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Negative
-                  </p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {stats.sentiment_breakdown.negative || 0}
-                  </p>
+              <Card className="p-4 shadow-none">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Negative
+                    </p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {stats.sentiment_breakdown.negative || 0}
+                    </p>
+                  </div>
+                  <TrendingDown className="h-5 w-5 text-red-600" />
                 </div>
-                <TrendingDown className="h-5 w-5 text-red-600" />
-              </div>
-            </Card>
-          </div>
+              </Card>
+            </>
+          ) : null}
         </div>
-      )}
-
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-lg font-semibold">Recent Feedback</h2>
       </div>
 
+      {/* Feedback Section Header */}
+      <div className="flex-shrink-0 mb-4">
+        <div>
+          <h2 className="text-lg font-semibold">All Feedback</h2>
+          <p className="text-sm text-muted-foreground">
+            {pagination &&
+              `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
+          </p>
+        </div>
+      </div>
+
+      {/* Feedback List */}
       <div className="flex-1 overflow-hidden">
         <div className="max-h-[500px] overflow-y-auto pr-2">
-          <div className="space-y-2">
-            {feedback.length === 0 ? (
+          <div className="space-y-2 mb-6">
+            {feedbackError ? (
+              <div className="text-center py-8">
+                <MessageSquare className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-destructive mb-2">
+                  Error Loading Feedback
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {feedbackError}
+                </p>
+                <Button
+                  onClick={() => loadFeedback(currentPage)}
+                  variant="outline"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+              </div>
+            ) : feedbackLoading ? (
+              <>
+                {[...Array(5)].map((_, i) => (
+                  <FeedbackCardSkeleton key={i} />
+                ))}
+              </>
+            ) : feedback.length === 0 ? (
               <div className="text-center py-8">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-muted-foreground mb-2">
@@ -194,8 +270,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="flex-shrink-0 flex justify-center mt-4 pt-4">
-        <Button onClick={loadDashboardData} variant="default">
+      {/* Pagination Controls */}
+      <div className="flex-shrink-0 my-4">
+        {pagination ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={handlePageChange}
+            disabled={feedbackLoading}
+          />
+        ) : null}
+      </div>
+
+      {/* Refresh Button */}
+      <div className="flex-shrink-0 flex justify-center pt-4">
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          className="!bg-white !text-black border-gray-300"
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
         </Button>
