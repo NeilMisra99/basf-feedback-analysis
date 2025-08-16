@@ -2,10 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, LayoutDashboard } from "lucide-react";
 import { Suspense, lazy } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import {
-  DashboardSkeleton,
-  FeedbackFormSkeleton,
-} from "./components/ui/loading";
+import { FeedbackFormSkeleton } from "./components/ui/loading";
 import Dashboard from "./components/Dashboard";
 
 // Lazy load only the feedback form
