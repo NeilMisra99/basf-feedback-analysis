@@ -56,7 +56,7 @@ export default function Dashboard() {
     <div className="h-full flex flex-col">
       {/* Stats Cards */}
       <div className="flex-shrink-0 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statsLoading ? (
             <>
               <StatCardSkeleton />

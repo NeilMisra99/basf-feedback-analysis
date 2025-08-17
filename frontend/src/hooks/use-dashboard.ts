@@ -35,6 +35,7 @@ export function useDashboard(): UseDashboardResult {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const prevRefreshTriggerRef = useRef<number | null>(null);
   const prevLatestFeedbackIdRef = useRef<string | number | null>(null);
+  const completedIdsRef = useRef<Set<string>>(new Set());
 
   const loadDashboardStats = useCallback(async () => {
     try {
@@ -126,10 +127,16 @@ export function useDashboard(): UseDashboardResult {
         }
         return [latestFeedback, ...prevFeedback];
       });
+    }
 
-      if (latestFeedback.processing_status === "completed") {
-        loadDashboardStats();
-      }
+    // Independently refresh stats once when an item completes processing
+    if (
+      latestFeedback &&
+      latestFeedback.processing_status === "completed" &&
+      !completedIdsRef.current.has(latestFeedback.id)
+    ) {
+      completedIdsRef.current.add(latestFeedback.id);
+      loadDashboardStats();
     }
 
     const hasProcessingItems = feedback.some(
