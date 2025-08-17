@@ -25,6 +25,10 @@ class SSEManager:
             client = SSEClient(client_id, self)
             self.clients[client_id] = client
             logger.info(f"New SSE client {client_id} connected. Total: {len(self.clients)}")
+            try:
+                client.send_event({'type': 'connected', 'message': 'SSE connection established'})
+            except Exception:
+                pass
             return client
         
     def remove_client(self, client_id: str):

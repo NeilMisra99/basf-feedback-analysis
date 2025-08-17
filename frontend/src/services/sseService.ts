@@ -17,9 +17,10 @@ class SSEService {
   private eventSource: EventSource | null = null;
   private isConnected = false;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private eventHandlers: Set<SSEEventHandler> = new Set();
+  private watchdogTimerId: number | null = null;
+  private lastEventAt = 0;
 
   private get apiUrl(): string {
     return process.env.REACT_APP_API_URL || "http://localhost:5001/api/v1";
@@ -46,6 +47,8 @@ class SSEService {
         }
         this.isConnected = true;
         this.reconnectAttempts = 0;
+        this.lastEventAt = Date.now();
+        this.startWatchdog();
       };
 
       this.eventSource.onmessage = (event) => {
@@ -54,6 +57,8 @@ class SSEService {
           if (import.meta.env.DEV) {
             console.log("[SSE] Received event:", data.type, data);
           }
+          this.lastEventAt = Date.now();
+          this.reconnectAttempts = 0;
 
           this.eventHandlers.forEach((handler) => {
             try {
@@ -94,6 +99,7 @@ class SSEService {
     }
     this.isConnected = false;
     this.reconnectAttempts = 0;
+    this.stopWatchdog();
   }
 
   /**
@@ -119,11 +125,6 @@ class SSEService {
    * Handle reconnection logic
    */
   private handleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("[SSE] Max reconnection attempts reached. Giving up.");
-      return;
-    }
-
     this.reconnectAttempts++;
     const delay = Math.min(
       this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
@@ -134,6 +135,29 @@ class SSEService {
       this.disconnect(); // Clean up before reconnecting
       this.connect();
     }, delay);
+  }
+
+  private startWatchdog(): void {
+    if (this.watchdogTimerId !== null) return;
+    // Check every 30s; if no event within 60s, force reconnect
+    this.watchdogTimerId = window.setInterval(() => {
+      const now = Date.now();
+      if (this.eventSource && now - this.lastEventAt > 60000) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            "[SSE] Watchdog detected inactivity >60s. Reconnecting..."
+          );
+        }
+        this.handleReconnect();
+      }
+    }, 30000);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogTimerId !== null) {
+      window.clearInterval(this.watchdogTimerId);
+      this.watchdogTimerId = null;
+    }
   }
 }
 
