@@ -1,9 +1,9 @@
-"""OpenAI service for generating contextual responses."""
+"""OpenAI service for generating contextual responses (HTTP API)."""
 
 import os
 import logging
 from typing import Dict, Any
-from openai import OpenAI
+import requests
 from .base import BaseExternalService, retry_on_failure, ServiceResponse
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,8 @@ class OpenAIResponseService(BaseExternalService):
         super().__init__("OpenAI")
         self.api_key = os.environ.get('OPENAI_API_KEY')
         self.model = os.environ.get('OPENAI_MODEL', 'gpt-4o')
+        self.base_url = os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com')
+        self.timeout_seconds = 30
         self.initialize()
     
     def _validate_credentials(self) -> bool:
@@ -22,19 +24,12 @@ class OpenAIResponseService(BaseExternalService):
         return bool(self.api_key)
     
     def _initialize_client(self) -> bool:
-        """Initialize OpenAI client."""
-        try:
-            self.client = OpenAI(api_key=self.api_key)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
-            return False
+        """Validate OpenAI API credentials."""
+        return bool(self.base_url and self.api_key)
     
     @retry_on_failure(max_retries=2, delay=1.0)
     def generate_contextual_response(self, feedback_text: str, sentiment_data: Dict[str, Any]) -> ServiceResponse:
-        """
-        Generate contextual response based on sentiment analysis and feedback content.
-        """
+        """Generate contextual response using OpenAI Chat Completions API."""
         if not self.is_available:
             return self._get_fallback_response(feedback_text, sentiment_data)
         
@@ -46,38 +41,55 @@ class OpenAIResponseService(BaseExternalService):
             
             # Build context-aware prompt
             context = self._build_response_context(sentiment, confidence, key_phrases, opinions)
-            
             prompt = self._create_prompt(feedback_text, context)
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+
+            url = f"{self.base_url.rstrip('/')}/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": self.model,
+                "messages": [
                     {
-                        "role": "system", 
-                        "content": "You are an expert customer service representative known for empathetic, personalized responses."
+                        "role": "system",
+                        "content": "You are an expert customer service representative known for empathetic, personalized responses.",
                     },
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
-                max_tokens=200,
-                temperature=0.7
-            )
-            
-            response_text = response.choices[0].message.content.strip()
-            
+                "max_tokens": 200,
+                "temperature": 0.7,
+            }
+
+            resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout_seconds)
+            resp.raise_for_status()
+            data = resp.json()
+
+            # Extract response text and usage similar to SDK
+            choices = data.get("choices", [])
+            if not choices:
+                raise ValueError("OpenAI API returned no choices")
+
+            message = choices[0].get("message", {})
+            response_text = (message.get("content") or "").strip()
+
+            usage = data.get("usage", {})
+            total_tokens = usage.get("total_tokens", 0)
+
             response_data = {
                 'response_text': response_text,
                 'model_used': self.model,
-                'tokens_used': response.usage.total_tokens,
+                'tokens_used': total_tokens,
                 'sentiment_addressed': sentiment,
-                'key_phrases_used': key_phrases[:3]  # Track which phrases were addressed
+                'key_phrases_used': key_phrases[:3],
             }
-            
+
             return ServiceResponse(
                 success=True,
                 data=response_data,
                 service_used="openai"
             )
-            
+
         except Exception as e:
             logger.error(f"OpenAI response generation error: {str(e)}")
             return self._get_fallback_response(feedback_text, sentiment_data)
