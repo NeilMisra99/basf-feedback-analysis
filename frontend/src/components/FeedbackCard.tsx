@@ -196,7 +196,12 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
                     const audioUrl =
                       feedbackAPI.getAudioUrl(feedback.audio_file.id) +
                       "?download=true";
-                    window.open(audioUrl, "_blank");
+                    const link = document.createElement("a");
+                    link.href = audioUrl;
+                    link.download = `feedback_${feedback.id}_response.mp3`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                   }
                 }}
                 variant="outline"

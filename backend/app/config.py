@@ -3,7 +3,6 @@
 import os
 from typing import Dict, Any
 
-
 class Config:
     
     # Database Configuration
@@ -37,7 +36,7 @@ class Config:
     
     @classmethod
     def validate_config(cls) -> Dict[str, Any]:
-        """Validate critical configuration and return status."""
+        """Validate critical configuration and return status (non-throwing)."""
         validation_results = {
             'secret_key': bool(cls.SECRET_KEY),
             'database_configured': bool(cls.SQLALCHEMY_DATABASE_URI),
@@ -45,11 +44,6 @@ class Config:
             'azure_speech': bool(cls.AZURE_SPEECH_KEY and cls.AZURE_SPEECH_REGION),
             'openai': bool(cls.OPENAI_API_KEY),
         }
-        
-        # Critical validations
-        if not cls.SECRET_KEY:
-            raise ValueError('SECRET_KEY environment variable is required')
-        
         return validation_results
 
 

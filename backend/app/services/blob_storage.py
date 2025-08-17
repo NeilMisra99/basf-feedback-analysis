@@ -255,3 +255,14 @@ class BlobStorageService(BaseExternalService):
         except Exception as e:
             logger.error(f"Failed to get audio URL: {str(e)}")
             return None
+
+
+_blob_singleton: Optional[BlobStorageService] = None
+
+
+def get_blob_storage() -> BlobStorageService:
+    """Process-wide singleton accessor for BlobStorageService."""
+    global _blob_singleton
+    if _blob_singleton is None:
+        _blob_singleton = BlobStorageService()
+    return _blob_singleton

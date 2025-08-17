@@ -36,11 +36,11 @@ class SSEManager:
         
     def send_feedback_update(self, feedback: Feedback):
         """Send feedback update to all connected clients."""
-        from app.routes import _build_complete_feedback_data
-        
+        from app.serializers import serialize_feedback
+
         event_data = {
             'type': 'feedback_update',
-            'data': _build_complete_feedback_data(feedback)
+            'data': serialize_feedback(feedback)
         }
         
         with self.lock:
@@ -68,7 +68,7 @@ class SSEClient:
     def __init__(self, client_id: str, manager: SSEManager):
         self.client_id = client_id
         self.manager = manager
-        self.message_queue = queue.Queue()
+        self.message_queue = queue.Queue(maxsize=500) # Bounded queue to provide backpressure and avoid unbounded memory growth
         self.is_connected = True
         
     def send_event(self, data: dict):
@@ -84,7 +84,6 @@ class SSEClient:
         try:
             self.message_queue.put(event, block=False)
         except queue.Full:
-            # If queue is full, disconnect the client
             self.disconnect()
             
     def get_events(self):
@@ -92,7 +91,7 @@ class SSEClient:
         try:
             while self.is_connected:
                 try:
-                    event = self.message_queue.get(timeout=1)
+                    event = self.message_queue.get(timeout=15)
                     yield event
                 except queue.Empty:
                     yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"

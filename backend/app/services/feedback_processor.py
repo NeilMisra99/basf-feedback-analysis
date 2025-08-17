@@ -19,7 +19,9 @@ class FeedbackProcessor:
         self.speech_service = AzureSpeechService()
     
     def process_feedback_complete(self, feedback_id: str) -> bool:
-        """Process feedback through the complete pipeline."""
+        """Process feedback through the complete pipeline.
+        Emits SSE updates after key milestones via sse_manager.
+        """
         try:
             # Get feedback from database
             feedback = Feedback.query.get(feedback_id)
@@ -32,15 +34,32 @@ class FeedbackProcessor:
             if not sentiment_result:
                 logger.error(f"Sentiment analysis failed for feedback {feedback_id}")
                 return False
+            # Emit update after sentiment commit
+            try:
+                from app.sse_manager import sse_manager
+                sse_manager.send_feedback_update(feedback)
+            except Exception:
+                logger.debug("SSE update after sentiment skipped")
             
             # Step 2: AI Response Generation
             response_result = self._process_ai_response(feedback, sentiment_result.data)
             if not response_result:
                 logger.error(f"AI response generation failed for feedback {feedback_id}")
                 return False
+            # Emit update after AI response commit
+            try:
+                from app.sse_manager import sse_manager
+                sse_manager.send_feedback_update(feedback)
+            except Exception:
+                logger.debug("SSE update after ai_response skipped")
             
             # Step 3: Audio Generation (optional)
             self._process_audio_generation(feedback, sentiment_result.data, response_result.data)
+            try:
+                from app.sse_manager import sse_manager
+                sse_manager.send_feedback_update(feedback)
+            except Exception:
+                logger.debug("SSE update after audio skipped")
             
             logger.info(f"Processing completed for feedback {feedback_id}")
             return True

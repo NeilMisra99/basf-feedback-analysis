@@ -1,28 +1,34 @@
 from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
-from sqlalchemy.orm import joinedload
 from app import db
 from app.models import Feedback, AudioFile
-from app.services import FeedbackProcessor
 from app.validators import (
     FeedbackValidator, QueryValidator, ValidationError,
     validate_json_request, handle_database_errors
 )
 from app.background_processor import background_processor
 from app.sse_manager import sse_manager
+from app.queries import base_feedback_query, get_feedback_with_relations
 import os
 import logging
 import json
 import time
 import re
 from datetime import timezone
+import uuid
+from sqlalchemy import text
+from app.serializers import serialize_feedback
 
 logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__)
 
-def _is_valid_uuid(uuid_string):
-    """Validate UUID format."""
-    return re.match(r'^[0-9a-f-]{36}$', uuid_string) is not None
+def _is_valid_uuid(uuid_string: str) -> bool:
+    """Validate UUID format robustly using uuid module."""
+    try:
+        uuid.UUID(uuid_string)
+        return True
+    except Exception:
+        return False
 
 def _error_response(message, code, status=400):
     """Create standardized error response."""
@@ -33,36 +39,21 @@ def _error_response(message, code, status=400):
     }), status
 
 def _get_feedback_with_relations(feedback_id=None):
-    """Helper to get feedback with all related data."""
-    query = Feedback.query.options(
-        joinedload(Feedback.sentiment_analysis),
-        joinedload(Feedback.ai_response),
-        joinedload(Feedback.audio_file)
-    )
-    return query.get(feedback_id) if feedback_id else query
+    """Deprecated: use helpers in app.queries instead."""
+    if feedback_id:
+        return get_feedback_with_relations(feedback_id)
+    return base_feedback_query()
 
 def _build_complete_feedback_data(feedback):
-    """Build complete feedback data including all related AI data for dashboard"""
-    response_data = feedback.to_dict()
-    
-    if feedback.sentiment_analysis:
-        response_data['sentiment_analysis'] = feedback.sentiment_analysis.to_dict()
-    
-    if feedback.ai_response:
-        response_data['ai_response'] = feedback.ai_response.to_dict()
-    
-    if feedback.audio_file:
-        response_data['audio_file'] = feedback.audio_file.to_dict()
-        response_data['audio_url'] = f'/api/v1/audio/{feedback.audio_file.id}'
-    
-    return response_data
+    """Deprecated: use serialize_feedback instead."""
+    return serialize_feedback(feedback)
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint with service status information."""
     try:
         # Test database connectivity
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         db_status = 'healthy'
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
@@ -70,8 +61,12 @@ def health_check():
     
     # Get service status
     try:
-        processor = FeedbackProcessor()
-        services_status = processor.get_service_status()
+        # Avoid heavy client instantiation: check presence of env/config only
+        services_status = {
+            'text_analytics': {'available': bool(os.environ.get('AZURE_TEXT_ANALYTICS_ENDPOINT') and os.environ.get('AZURE_TEXT_ANALYTICS_KEY')), 'service': 'Azure Text Analytics'},
+            'openai': {'available': bool(os.environ.get('OPENAI_API_KEY')), 'service': 'OpenAI'},
+            'speech': {'available': bool(os.environ.get('AZURE_SPEECH_KEY') and os.environ.get('AZURE_SPEECH_REGION')), 'service': 'Azure Speech'}
+        }
     except Exception as e:
         logger.error(f"Service status check failed: {str(e)}")
         services_status = {'error': 'Unable to check service status'}
@@ -142,7 +137,7 @@ def get_feedback(feedback_id):
         if not _is_valid_uuid(feedback_id):
             return _error_response('Invalid feedback ID format', 'INVALID_ID')
         
-        feedback = _get_feedback_with_relations(feedback_id)
+        feedback = get_feedback_with_relations(feedback_id)
         
         if not feedback:
             return _error_response('Feedback not found', 'NOT_FOUND', 404)
@@ -179,7 +174,7 @@ def list_feedback():
         )
         
         # Build query with filters and eager loading
-        query = _get_feedback_with_relations()
+        query = base_feedback_query()
         
         # Add category filter if provided and valid
         if category:
@@ -227,24 +222,21 @@ def list_feedback():
 @api_bp.route('/audio/<audio_id>', methods=['GET'])
 @handle_database_errors
 def get_audio(audio_id):
-    """Serve audio files from Blob Storage with secure access."""
+    """Serve audio files from Blob Storage or local disk. No regeneration on GET."""
     try:
-        # Validate UUID format
         if not _is_valid_uuid(audio_id):
             return _error_response('Invalid audio ID format', 'INVALID_ID')
-        
+
         audio_file = AudioFile.query.get(audio_id)
-        
         if not audio_file:
             return _error_response('Audio file not found', 'NOT_FOUND', 404)
-        
+
         download = request.args.get('download', 'false').lower() == 'true'
         filename = f'feedback_{audio_file.feedback_id}_response.mp3'
-        
-        # Try Blob Storage first, fallback to local file
-        from app.services.blob_storage import BlobStorageService
-        blob_service = BlobStorageService()
-        
+
+        # Prefer Blob Storage
+        from app.services.blob_storage import get_blob_storage
+        blob_service = get_blob_storage()
         if blob_service.is_available:
             blob_result = blob_service.get_blob_content(audio_file.feedback_id)
             if blob_result.success and blob_result.data:
@@ -256,6 +248,8 @@ def get_audio(audio_id):
                         'Content-Disposition': f'{"attachment" if download else "inline"}; filename="{filename}"'
                     }
                 )
+
+        # Fallback to local file
         if os.path.exists(audio_file.file_path):
             return send_file(
                 audio_file.file_path,
@@ -263,41 +257,9 @@ def get_audio(audio_id):
                 mimetype='audio/mpeg',
                 download_name=filename if download else None
             )
-        
-        # Try to regenerate if not found
-        
-        try:
-            feedback = Feedback.query.get(audio_file.feedback_id)
-            if feedback and feedback.ai_response and feedback.sentiment_analysis:
-                from app.services import FeedbackProcessor
-                processor = FeedbackProcessor()
-                
-                audio_result = processor.speech_service.generate_emotion_aware_audio(
-                    feedback.ai_response.response_text,
-                    feedback.sentiment_analysis.to_dict(),
-                    feedback.id
-                )
-                
-                if audio_result.success:
-                    if blob_service.is_available:
-                        sas_url = blob_service.get_audio_url(audio_file.feedback_id, download=download)
-                        if sas_url:
-                            from flask import redirect
-                            return redirect(sas_url)
-                    
-                    if os.path.exists(audio_file.file_path):
-                        return send_file(
-                            audio_file.file_path,
-                            as_attachment=download,
-                            mimetype='audio/mpeg',
-                            download_name=filename if download else None
-                        )
-        except Exception as regen_error:
-            logger.error(f"Error regenerating audio: {str(regen_error)}")
-        
-        # If all else fails
+
         return _error_response('Audio file not available - please try again later', 'FILE_NOT_AVAILABLE', 404)
-        
+
     except Exception as e:
         logger.error(f"Error serving audio file {audio_id}: {str(e)}")
         return jsonify({
@@ -309,39 +271,54 @@ def get_audio(audio_id):
 @api_bp.route('/dashboard/stats', methods=['GET'])
 def dashboard_stats():
     try:
-        from sqlalchemy import text
-        
-        # Get total count
-        total_feedback = db.session.execute(
-            text("SELECT COUNT(*) as count FROM feedback")
-        ).scalar() or 0
-        
-        # Get sentiment breakdown
-        sentiment_results = db.session.execute(
-            text("""
-                SELECT s.sentiment, COUNT(*) as count
-                FROM sentiment_analysis s
-                JOIN feedback f ON f.id = s.feedback_id
-                WHERE f.processing_status = 'completed'
-                GROUP BY s.sentiment
-            """)
-        ).fetchall()
-        
-        sentiment_breakdown = {row.sentiment: row.count for row in sentiment_results}
-        
-        # Get category breakdown
-        category_results = db.session.execute(
-            text("""
-                SELECT COALESCE(category, 'uncategorized') as category, COUNT(*) as count
-                FROM feedback
-                GROUP BY category
-            """)
-        ).fetchall()
-        
-        category_breakdown = {row.category: row.count for row in category_results}
-        
-        # Get recent feedback with minimal data
-        recent_sql = text("""
+        return jsonify({
+            'status': 'success',
+            'data': _get_dashboard_stats()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to retrieve dashboard stats: {str(e)}'
+        }), 500
+
+
+def _get_dashboard_stats():
+    """Compose dashboard stats from optimized SQL queries."""
+    # Total feedback
+    total_feedback = db.session.execute(
+        text("SELECT COUNT(*) as count FROM feedback")
+    ).scalar() or 0
+
+    # Sentiment breakdown for completed items
+    sentiment_results = db.session.execute(
+        text(
+            """
+            SELECT s.sentiment, COUNT(*) as count
+            FROM sentiment_analysis s
+            JOIN feedback f ON f.id = s.feedback_id
+            WHERE f.processing_status = 'completed'
+            GROUP BY s.sentiment
+            """
+        )
+    ).fetchall()
+    sentiment_breakdown = {row.sentiment: row.count for row in sentiment_results}
+
+    # Category breakdown
+    category_results = db.session.execute(
+        text(
+            """
+            SELECT COALESCE(category, 'uncategorized') as category, COUNT(*) as count
+            FROM feedback
+            GROUP BY category
+            """
+        )
+    ).fetchall()
+    category_breakdown = {row.category: row.count for row in category_results}
+
+    # Recent feedback minimal view (limit 5)
+    recent_results = db.session.execute(
+        text(
+            """
             SELECT 
                 f.id, f.text, f.category, f.created_at, f.processing_status,
                 s.sentiment, s.confidence_score,
@@ -353,57 +330,51 @@ def dashboard_stats():
             LEFT JOIN audio_files af ON f.id = af.feedback_id
             ORDER BY f.created_at DESC
             LIMIT 5
-        """)
-        
-        recent_results = db.session.execute(recent_sql).fetchall()
-        
-        # Build response data
-        recent_feedback_data = []
-        for row in recent_results:
-            # Handle created_at - it might be a string from SQLite
-            created_at_iso = None
-            if row.created_at:
-                if hasattr(row.created_at, 'isoformat'):
-                    created_at_iso = row.created_at.replace(tzinfo=timezone.utc).isoformat()
-                else:
-                    # If it's already a string from SQLite, use it directly
-                    created_at_iso = str(row.created_at)
-            
-            feedback_item = {
+            """
+        )
+    ).fetchall()
+
+    recent_feedback_data = []
+    for row in recent_results:
+        created_at_iso = None
+        if row.created_at:
+            created_at_iso = (
+                row.created_at.replace(tzinfo=timezone.utc).isoformat()
+                if hasattr(row.created_at, 'isoformat')
+                else str(row.created_at)
+            )
+
+        recent_feedback_data.append(
+            {
                 'id': row.id,
                 'text': row.text,
                 'category': row.category,
                 'created_at': created_at_iso,
                 'processing_status': row.processing_status,
-                'sentiment_analysis': {
-                    'sentiment': row.sentiment,
-                    'confidence_score': row.confidence_score
-                } if row.sentiment else None,
-                'ai_response': {
-                    'response_text': row.response_text
-                } if row.response_text else None,
-                'audio_file': {
-                    'id': row.audio_file_id
-                } if row.audio_file_id else None,
-                'audio_url': f'/api/v1/audio/{row.audio_file_id}' if row.audio_file_id else None
+                'sentiment_analysis': (
+                    {
+                        'sentiment': row.sentiment,
+                        'confidence_score': row.confidence_score,
+                    }
+                    if row.sentiment
+                    else None
+                ),
+                'ai_response': (
+                    {'response_text': row.response_text} if row.response_text else None
+                ),
+                'audio_file': ({'id': row.audio_file_id} if row.audio_file_id else None),
+                'audio_url': (
+                    f'/api/v1/audio/{row.audio_file_id}' if row.audio_file_id else None
+                ),
             }
-            recent_feedback_data.append(feedback_item)
-        
-        return jsonify({
-            'status': 'success',
-            'data': {
-                'total_feedback': total_feedback,
-                'sentiment_breakdown': sentiment_breakdown,
-                'category_breakdown': category_breakdown,
-                'recent_feedback': recent_feedback_data
-            }
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Failed to retrieve dashboard stats: {str(e)}'
-        }), 500
+        )
+
+    return {
+        'total_feedback': total_feedback,
+        'sentiment_breakdown': sentiment_breakdown,
+        'category_breakdown': category_breakdown,
+        'recent_feedback': recent_feedback_data,
+    }
 
 @api_bp.route('/events', methods=['GET'])
 def sse_stream():
@@ -425,10 +396,7 @@ def sse_stream():
         headers={
             'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Cache-Control',
             'X-Accel-Buffering': 'no',  # Disable Nginx buffering
             'Content-Type': 'text/event-stream; charset=utf-8',
-            'Transfer-Encoding': 'chunked'  # Force chunked transfer
         }
     )

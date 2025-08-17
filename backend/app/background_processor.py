@@ -6,18 +6,13 @@ from queue import Queue
 from typing import Optional
 from app import db
 from app.models import Feedback
+from app.queries import get_feedback_with_relations
 from app.services.feedback_processor import FeedbackProcessor
 
 logger = logging.getLogger(__name__)
 
 def _get_feedback_with_relations(feedback_id):
-    """Helper to get feedback with all related data."""
-    from sqlalchemy.orm import joinedload
-    return Feedback.query.options(
-        joinedload(Feedback.sentiment_analysis),
-        joinedload(Feedback.ai_response),
-        joinedload(Feedback.audio_file)
-    ).get(feedback_id)
+    return get_feedback_with_relations(feedback_id)
 
 class BackgroundProcessor:
     
