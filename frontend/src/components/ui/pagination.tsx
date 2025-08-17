@@ -33,7 +33,6 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-center gap-2">
-      {/* Previous button */}
       <Button
         variant="outline"
         size="sm"
@@ -45,7 +44,6 @@ export function Pagination({
         Previous
       </Button>
 
-      {/* First page */}
       {visiblePages[0] > 1 && (
         <>
           <Button
@@ -67,7 +65,6 @@ export function Pagination({
         </>
       )}
 
-      {/* Visible page numbers */}
       {visiblePages.map((page) => (
         <Button
           key={page}
@@ -85,7 +82,6 @@ export function Pagination({
         </Button>
       ))}
 
-      {/* Last page */}
       {visiblePages[visiblePages.length - 1] < totalPages && (
         <>
           {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
@@ -107,7 +103,6 @@ export function Pagination({
         </>
       )}
 
-      {/* Next button */}
       <Button
         variant="outline"
         size="sm"

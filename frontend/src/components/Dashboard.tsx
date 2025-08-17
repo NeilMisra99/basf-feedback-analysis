@@ -54,7 +54,6 @@ export default function Dashboard() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Stats Cards */}
       <div className="flex-shrink-0 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statsLoading ? (
@@ -69,7 +68,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Feedback Section Header */}
       <div className="flex-shrink-0 mb-4">
         <div className="flex items-center justify-between pr-2">
           <div>
@@ -97,7 +95,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Feedback List */}
       <div className="flex-1 overflow-hidden">
         <div className="max-h-[500px] overflow-y-auto pr-2">
           <div className="space-y-2">
@@ -143,7 +140,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Pagination Controls */}
       {pagination && pagination.pages > 1 ? (
         <div className="flex-shrink-0 mt-4">
           <Pagination

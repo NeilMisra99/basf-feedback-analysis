@@ -27,23 +27,19 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         case "feedback_update":
           if (event.data) {
             setLatestFeedback(event.data);
-            // Don't trigger refresh - let components handle SSE updates directly
-            // triggerRefresh() would cause race conditions with API calls
+            // Components consume SSE updates directly; avoid global refresh
           }
           break;
         case "connected":
           break;
         case "heartbeat":
-          // SSE connection is alive - don't log to reduce noise
           break;
       }
     };
 
-    // Connect to SSE and add event listener
     sseService.connect();
     const removeListener = sseService.addEventListener(handleSSEEvent);
 
-    // Cleanup on unmount
     return () => {
       removeListener();
       sseService.disconnect();

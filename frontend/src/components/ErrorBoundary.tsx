@@ -22,17 +22,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error to external service in production
     if (import.meta.env.PROD) {
       console.error("Error caught by boundary:", error, errorInfo);
     }
 
-    // Call optional error handler
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
@@ -44,12 +41,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Custom fallback UI if provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // Default error UI
       return (
         <Card className="max-w-lg mx-auto mt-8">
           <CardHeader className="text-center">
@@ -104,7 +99,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-// Higher-order component for functional components
 export function withErrorBoundary<T extends object>(
   Component: React.ComponentType<T>,
   errorBoundaryProps?: Omit<Props, "children">

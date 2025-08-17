@@ -76,7 +76,7 @@ class SSEClient:
     def __init__(self, client_id: str, manager: SSEManager):
         self.client_id = client_id
         self.manager = manager
-        self.message_queue = queue.Queue(maxsize=500) # Bounded queue to provide backpressure and avoid unbounded memory growth
+        self.message_queue = queue.Queue(maxsize=500)
         self.is_connected = True
         
     def send_event(self, data: dict):
@@ -84,11 +84,9 @@ class SSEClient:
         if not self.is_connected:
             return
             
-        # Format as SSE event
         json_data = json.dumps(data)
         event = f"data: {json_data}\n\n"
         
-        # Queue the event for the generator
         try:
             self.message_queue.put(event, block=False)
         except queue.Full:
@@ -102,7 +100,6 @@ class SSEClient:
                     event = self.message_queue.get(timeout=30)
                     yield event
                 except queue.Empty:
-                    # Send heartbeat every 30 seconds (reduced frequency)
                     yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
         except Exception as e:
             logger.error(f"Error in SSE event generator for {self.client_id}: {str(e)}")
@@ -114,5 +111,4 @@ class SSEClient:
         self.is_connected = False
         self.manager.remove_client(self.client_id)
 
-# Global instance
 sse_manager = SSEManager()

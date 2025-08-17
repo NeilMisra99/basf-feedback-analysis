@@ -28,12 +28,10 @@ class BlobStorageService(BaseExternalService):
             self.blob_service_client = BlobServiceClient.from_connection_string(
                 self.connection_string
             )
-            # Test connection and ensure container exists
             container_client = self.blob_service_client.get_container_client(self.container_name)
             try:
                 container_client.get_container_properties()
             except Exception:
-                # Container doesn't exist, create it
                 container_client.create_container()
                 logger.info(f"Created blob container: {self.container_name}")
             return True
@@ -66,7 +64,6 @@ class BlobStorageService(BaseExternalService):
                 blob=blob_name
             )
             
-            # Upload file with proper content type
             with open(local_file_path, "rb") as data:
                 blob_client.upload_blob(
                     data, 
@@ -74,11 +71,9 @@ class BlobStorageService(BaseExternalService):
                     content_settings=ContentSettings(content_type="audio/mpeg")
                 )
             
-            # Get file size
             blob_properties = blob_client.get_blob_properties()
             file_size = blob_properties.size
             
-            # Generate SAS URL for secure access (valid for 24 hours)
             sas_url = self.generate_sas_url(blob_name, hours_valid=24)
             
             logger.info(f"Audio file uploaded to blob: {blob_name} ({file_size} bytes)")
@@ -115,8 +110,6 @@ class BlobStorageService(BaseExternalService):
             SAS URL string
         """
         try:
-            # Extract account name and key from connection string
-            # Format: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
             conn_parts = {}
             for item in self.connection_string.split(';'):
                 if '=' in item:
@@ -130,7 +123,6 @@ class BlobStorageService(BaseExternalService):
                 logger.error("Unable to extract account name/key from connection string")
                 return ""
             
-            # Generate SAS token with proper UTC datetime
             sas_token = generate_blob_sas(
                 account_name=account_name,
                 container_name=self.container_name,
@@ -140,7 +132,6 @@ class BlobStorageService(BaseExternalService):
                 expiry=datetime.utcnow() + timedelta(hours=hours_valid)
             )
             
-            # Construct full SAS URL
             blob_url = f"https://{account_name}.blob.core.windows.net/{self.container_name}/{blob_name}"
             return f"{blob_url}?{sas_token}"
             
@@ -172,7 +163,6 @@ class BlobStorageService(BaseExternalService):
                 blob=blob_name
             )
             
-            # Download blob content
             blob_data = blob_client.download_blob().readall()
             
             return ServiceResponse(
@@ -246,7 +236,6 @@ class BlobStorageService(BaseExternalService):
             sas_url = self.generate_sas_url(blob_name, hours_valid=1)  # Short-lived for access
             
             if download and sas_url:
-                # Add download disposition to URL
                 separator = "&" if "?" in sas_url else "?"
                 sas_url += f"{separator}response-content-disposition=attachment%3B%20filename%3D{blob_name}"
             

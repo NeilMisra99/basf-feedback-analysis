@@ -1,6 +1,4 @@
-/**
- * Server-Sent Events service for real-time feedback updates
- */
+/** Server-Sent Events client for real-time feedback updates. */
 
 import type { Feedback } from "../types";
 
@@ -26,9 +24,6 @@ class SSEService {
     return process.env.REACT_APP_API_URL || "http://localhost:5001/api/v1";
   }
 
-  /**
-   * Start SSE connection
-   */
   connect(): void {
     if (this.isConnected || this.eventSource) {
       return;
@@ -70,7 +65,6 @@ class SSEService {
         }
         this.isConnected = false;
 
-        // Attempt to reconnect
         this.handleReconnect();
       };
     } catch (error) {
@@ -79,9 +73,6 @@ class SSEService {
     }
   }
 
-  /**
-   * Disconnect from SSE stream
-   */
   disconnect(): void {
     if (this.eventSource) {
       this.eventSource.close();
@@ -92,28 +83,18 @@ class SSEService {
     this.stopWatchdog();
   }
 
-  /**
-   * Add event handler
-   */
   addEventListener(handler: SSEEventHandler): () => void {
     this.eventHandlers.add(handler);
 
-    // Return cleanup function
     return () => {
       this.eventHandlers.delete(handler);
     };
   }
 
-  /**
-   * Get connection status
-   */
   getConnectionStatus(): boolean {
     return this.isConnected;
   }
 
-  /**
-   * Wait for connection to be established
-   */
   waitForConnection(timeout: number = 5000): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.isConnected) {
@@ -121,7 +102,7 @@ class SSEService {
         return;
       }
 
-      const checkInterval = 50; // Check every 50ms
+      const checkInterval = 50;
       let elapsed = 0;
 
       const intervalId = setInterval(() => {
@@ -137,15 +118,12 @@ class SSEService {
     });
   }
 
-  /**
-   * Handle reconnection logic
-   */
   private handleReconnect(): void {
     this.reconnectAttempts++;
     const delay = Math.min(
       this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
       30000
-    ); // Cap at 30 seconds
+    );
 
     setTimeout(() => {
       this.disconnect(); // Clean up before reconnecting
@@ -155,8 +133,7 @@ class SSEService {
 
   private startWatchdog(): void {
     if (this.watchdogTimerId !== null) return;
-    // Check every 45s; if no event within 90s, force reconnect
-    // (Increased thresholds since backend sends heartbeat every 15s)
+    // Force reconnect on inactivity >90s (backend heartbeat ~15s)
     this.watchdogTimerId = window.setInterval(() => {
       const now = Date.now();
       if (this.eventSource && now - this.lastEventAt > 90000) {
@@ -178,5 +155,4 @@ class SSEService {
   }
 }
 
-// Export singleton instance
 export const sseService = new SSEService();

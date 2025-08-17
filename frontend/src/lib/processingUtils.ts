@@ -1,6 +1,4 @@
-/**
- * Utility functions for feedback processing status display
- */
+/** Helpers for processing status display. */
 
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -13,7 +11,9 @@ export interface ProcessingStatusDisplay {
   className: string;
 }
 
-export function getProcessingStatusDisplay(status: ProcessingStatus): ProcessingStatusDisplay | null {
+export function getProcessingStatusDisplay(
+  status: ProcessingStatus
+): ProcessingStatusDisplay | null {
   switch (status) {
     case "processing":
       return {

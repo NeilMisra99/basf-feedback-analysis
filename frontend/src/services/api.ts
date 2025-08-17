@@ -7,7 +7,6 @@ import type {
   PaginatedFeedbackResponse,
 } from "../types";
 
-// Enhanced error type for better error handling
 export interface APIError {
   message: string;
   status?: number;
@@ -22,11 +21,10 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // 60 seconds to handle cold starts
+  timeout: 60000,
 });
 
 export const feedbackAPI = {
-  // Submit new feedback
   submitFeedback: async (
     feedback: FeedbackSubmission
   ): Promise<APIResponse<Feedback>> => {
@@ -37,36 +35,33 @@ export const feedbackAPI = {
     return response.data;
   },
 
-  // Get feedback by ID
   getFeedback: async (id: string): Promise<APIResponse<Feedback>> => {
     const response = await api.get<APIResponse<Feedback>>(`/feedback/${id}`);
     return response.data;
   },
 
-  // Get all feedback with pagination
   getAllFeedback: async (
     page = 1,
     perPage = 5
-  ): Promise<PaginatedFeedbackResponse & { status: string; message?: string }> => {
-    const response = await api.get<PaginatedFeedbackResponse & { status: string; message?: string }>(
-      `/feedback?page=${page}&per_page=${perPage}`
-    );
+  ): Promise<
+    PaginatedFeedbackResponse & { status: string; message?: string }
+  > => {
+    const response = await api.get<
+      PaginatedFeedbackResponse & { status: string; message?: string }
+    >(`/feedback?page=${page}&per_page=${perPage}`);
     return response.data;
   },
 
-  // Get dashboard statistics
   getDashboardStats: async (): Promise<APIResponse<DashboardStats>> => {
     const response =
       await api.get<APIResponse<DashboardStats>>("/dashboard/stats");
     return response.data;
   },
 
-  // Get audio file URL
   getAudioUrl: (audioId: string): string => {
     return `${API_BASE_URL}/audio/${audioId}`;
   },
 
-  // Health check
   healthCheck: async (): Promise<
     APIResponse<{ status: string; timestamp: string }>
   > => {
@@ -78,7 +73,6 @@ export const feedbackAPI = {
   },
 };
 
-// Enhanced response interceptor for better error handling
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<APIResponse<unknown>>) => {
@@ -91,7 +85,6 @@ api.interceptors.response.use(
       code: error.code,
     };
 
-    // Log error for debugging (only in development)
     if (import.meta.env.DEV) {
       console.error("API Error:", apiError);
     }

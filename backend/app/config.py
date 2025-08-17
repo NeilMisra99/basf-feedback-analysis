@@ -5,7 +5,6 @@ from typing import Dict, Any
 
 class Config:
     
-    # Database Configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///feedback_analysis.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -14,15 +13,12 @@ class Config:
         'connect_args': {'check_same_thread': False} if 'sqlite' in SQLALCHEMY_DATABASE_URI else {}
     }
     
-    # Security Configuration
     SECRET_KEY = os.environ.get('SECRET_KEY')
     JSON_SORT_KEYS = False
     JSONIFY_PRETTYPRINT_REGULAR = False
     
-    # CORS Configuration
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
     
-    # External Service Configuration
     AZURE_TEXT_ANALYTICS_ENDPOINT = os.environ.get('AZURE_TEXT_ANALYTICS_ENDPOINT')
     AZURE_TEXT_ANALYTICS_KEY = os.environ.get('AZURE_TEXT_ANALYTICS_KEY')
     AZURE_SPEECH_KEY = os.environ.get('AZURE_SPEECH_KEY')
@@ -30,8 +26,7 @@ class Config:
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o')
     
-    # Application Configuration
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max request size
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     AUDIO_FILES_DIR = os.path.join(os.path.dirname(__file__), '..', 'audio_files')
     
     @classmethod
@@ -56,7 +51,6 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Additional production security settings
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
@@ -68,7 +62,6 @@ class TestingConfig(Config):
     SECRET_KEY = 'test-secret-key'
 
 
-# Configuration mapping
 config_by_name = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,

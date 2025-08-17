@@ -39,7 +39,6 @@ class OpenAIResponseService(BaseExternalService):
             key_phrases = sentiment_data.get('key_phrases', [])
             opinions = sentiment_data.get('opinions', [])
             
-            # Build context-aware prompt
             context = self._build_response_context(sentiment, confidence, key_phrases, opinions)
             prompt = self._create_prompt(feedback_text, context)
 
@@ -65,7 +64,6 @@ class OpenAIResponseService(BaseExternalService):
             resp.raise_for_status()
             data = resp.json()
 
-            # Extract response text and usage similar to SDK
             choices = data.get("choices", [])
             if not choices:
                 raise ValueError("OpenAI API returned no choices")
@@ -126,7 +124,7 @@ class OpenAIResponseService(BaseExternalService):
         
         if opinions:
             opinion_summary = []
-            for opinion in opinions[:3]:  # Top 3 opinions
+            for opinion in opinions[:3]:
                 target = opinion['target']['text']
                 assessments = [a['text'] for a in opinion['assessments'][:2]]
                 opinion_summary.append(f"{target}: {', '.join(assessments)}")

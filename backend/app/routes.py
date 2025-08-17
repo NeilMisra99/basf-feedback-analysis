@@ -52,16 +52,14 @@ def _build_complete_feedback_data(feedback):
 def health_check():
     """Health check endpoint with service status information."""
     try:
-        # Test database connectivity
         db.session.execute(text('SELECT 1'))
         db_status = 'healthy'
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         db_status = 'unhealthy'
     
-    # Get service status
     try:
-        # Avoid heavy client instantiation: check presence of env/config only
+        # Avoid heavy client instantiation; check presence of env/config only
         services_status = {
             'text_analytics': {'available': bool(os.environ.get('AZURE_TEXT_ANALYTICS_ENDPOINT') and os.environ.get('AZURE_TEXT_ANALYTICS_KEY')), 'service': 'Azure Text Analytics'},
             'openai': {'available': bool(os.environ.get('OPENAI_API_KEY')), 'service': 'OpenAI'},
@@ -88,10 +86,8 @@ def health_check():
 def submit_feedback():
     """Submit new feedback with comprehensive validation."""
     try:
-        # Get validated data from the decorator
         validated_data = request.validated_data
         
-        # Create feedback record
         feedback = Feedback(
             text=validated_data['text'],
             category=validated_data['category']
@@ -102,10 +98,8 @@ def submit_feedback():
         
         logger.info(f"Feedback {feedback.id} created successfully")
         
-        # Send SSE update immediately
         sse_manager.send_feedback_update(feedback)
         
-        # Queue feedback for background processing
         background_processor.queue_feedback_processing(feedback.id)
         
         return jsonify({
@@ -136,7 +130,6 @@ def submit_feedback():
 def get_feedback(feedback_id):
     """Get a specific feedback record with all related data."""
     try:
-        # Validate UUID format
         if not _is_valid_uuid(feedback_id):
             return _error_response('Invalid feedback ID format', 'INVALID_ID')
         
@@ -145,7 +138,6 @@ def get_feedback(feedback_id):
         if not feedback:
             return _error_response('Feedback not found', 'NOT_FOUND', 404)
         
-        # Build complete response with all related data
         response_data = _build_complete_feedback_data(feedback)
         
         return jsonify({
@@ -166,7 +158,6 @@ def get_feedback(feedback_id):
 def list_feedback():
     """List feedback with pagination and filtering support."""
     try:
-        # Validate query parameters
         page, per_page = QueryValidator.validate_pagination(
             request.args.get('page'),
             request.args.get('per_page')
@@ -176,14 +167,11 @@ def list_feedback():
             request.args.get('category')
         )
         
-        # Build query with filters and eager loading
         query = base_feedback_query()
         
-        # Add category filter if provided and valid
         if category:
             query = query.filter(Feedback.category == category)
         
-        # Order by creation date for consistent results
         query = query.order_by(Feedback.created_at.desc())
         
         try:
@@ -287,12 +275,10 @@ def dashboard_stats():
 
 def _get_dashboard_stats():
     """Compose dashboard stats from optimized SQL queries."""
-    # Total feedback
     total_feedback = db.session.execute(
         text("SELECT COUNT(*) as count FROM feedback")
     ).scalar() or 0
 
-    # Sentiment breakdown for completed items
     sentiment_results = db.session.execute(
         text(
             """
@@ -306,7 +292,6 @@ def _get_dashboard_stats():
     ).fetchall()
     sentiment_breakdown = {row.sentiment: row.count for row in sentiment_results}
 
-    # Category breakdown
     category_results = db.session.execute(
         text(
             """
@@ -318,7 +303,6 @@ def _get_dashboard_stats():
     ).fetchall()
     category_breakdown = {row.category: row.count for row in category_results}
 
-    # Recent feedback minimal view (limit 5)
     recent_results = db.session.execute(
         text(
             """
@@ -399,7 +383,7 @@ def sse_stream():
         headers={
             'Cache-Control': 'no-cache, no-transform',
             'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',  # Disable Nginx buffering
+            'X-Accel-Buffering': 'no',
             'Content-Type': 'text/event-stream; charset=utf-8',
         }
     )

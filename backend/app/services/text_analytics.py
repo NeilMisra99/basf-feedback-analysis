@@ -44,7 +44,6 @@ class AzureTextAnalyticsService(BaseExternalService):
             return self._get_fallback_sentiment(text)
         
         try:
-            # Perform sentiment analysis with opinion mining
             documents = [text]
             result = self.client.analyze_sentiment(
                 documents, 
@@ -55,11 +54,9 @@ class AzureTextAnalyticsService(BaseExternalService):
             if result and not result[0].is_error:
                 doc = result[0]
                 
-                # Extract key phrases in parallel
                 key_phrases_result = self.client.extract_key_phrases(documents, language="en")
                 key_phrases = key_phrases_result[0].key_phrases if key_phrases_result and not key_phrases_result[0].is_error else []
                 
-                # Build comprehensive result
                 sentiment_data = self._build_sentiment_data(doc, key_phrases)
                 
                 logger.info(f"Sentiment analysis completed: {doc.sentiment} ({sentiment_data['confidence_score']:.2f})")
@@ -78,22 +75,18 @@ class AzureTextAnalyticsService(BaseExternalService):
     
     def _build_sentiment_data(self, doc, key_phrases: list) -> Dict[str, Any]:
         """Build comprehensive sentiment data from Azure response."""
-        # Handle mixed sentiment by mapping to dominant sentiment based on confidence scores
         original_sentiment = doc.sentiment
         final_sentiment = original_sentiment
         
         if original_sentiment == 'mixed':
-            # For mixed sentiment, choose the dominant sentiment (highest confidence score)
             scores = {
                 'positive': doc.confidence_scores.positive,
                 'negative': doc.confidence_scores.negative,
                 'neutral': doc.confidence_scores.neutral
             }
-            # Get the sentiment with highest confidence score
             final_sentiment = max(scores, key=scores.get)
             logger.info(f"Mixed sentiment detected, mapped to {final_sentiment} based on confidence scores: {scores}")
         
-        # Calculate confidence score for the final sentiment
         confidence_score = getattr(doc.confidence_scores, final_sentiment, 0.0)
         
         sentiment_data = {
@@ -109,7 +102,6 @@ class AzureTextAnalyticsService(BaseExternalService):
             'sentences': []
         }
         
-        # Extract opinions for aspect-based analysis
         for sentence in doc.sentences:
             sentence_data = {
                 'text': sentence.text,
@@ -118,7 +110,6 @@ class AzureTextAnalyticsService(BaseExternalService):
             }
             sentiment_data['sentences'].append(sentence_data)
             
-            # Extract mined opinions
             if hasattr(sentence, 'mined_opinions'):
                 for opinion in sentence.mined_opinions:
                     opinion_data = {
@@ -144,7 +135,6 @@ class AzureTextAnalyticsService(BaseExternalService):
     
     def _get_fallback_sentiment(self, text: str) -> ServiceResponse:
         """Fallback sentiment analysis for demo purposes."""
-        # Simple keyword-based fallback
         positive_words = ['good', 'great', 'excellent', 'amazing', 'love', 'perfect', 'wonderful']
         negative_words = ['bad', 'terrible', 'awful', 'hate', 'horrible', 'worst', 'disappointing']
         

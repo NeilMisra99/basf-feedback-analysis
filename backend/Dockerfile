@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     ca-certificates \
     libasound2 \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -21,9 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
 COPY . .
-
-# Create directory for temporary audio files
-RUN mkdir -p /tmp/audio_files
 
 # Expose port 8080
 EXPOSE 8080

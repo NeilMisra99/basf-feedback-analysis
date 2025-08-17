@@ -17,7 +17,6 @@ class ValidationError(Exception):
 
 class FeedbackValidator:
     
-    # Configuration constants
     MIN_TEXT_LENGTH = 10
     MAX_TEXT_LENGTH = 5000
     VALID_CATEGORIES = ['general', 'service', 'product', 'support', 'billing', 'technical']
@@ -28,10 +27,8 @@ class FeedbackValidator:
         if not data:
             raise ValidationError("Request body is required", code="MISSING_BODY")
         
-        # Validate text field
         text = cls._validate_text(data.get('text'))
         
-        # Validate category (optional)
         category = cls._validate_category(data.get('category', 'general'))
         
         return {
@@ -48,7 +45,6 @@ class FeedbackValidator:
         if not isinstance(text, str):
             raise ValidationError("Feedback text must be a string", field="text", code="INVALID_TYPE")
         
-        # Clean and validate text
         text = text.strip()
         
         if len(text) < cls.MIN_TEXT_LENGTH:
@@ -65,7 +61,6 @@ class FeedbackValidator:
                 code="TEXT_TOO_LONG"
             )
         
-        # Check for potentially malicious content
         if cls._contains_suspicious_content(text):
             raise ValidationError(
                 "Feedback contains inappropriate content",
@@ -138,7 +133,7 @@ def validate_json_request(validator_func):
         @wraps(route_func)
         def wrapper(*args, **kwargs):
             try:
-                # Check content type
+                # Require JSON content type
                 if not request.is_json:
                     return jsonify({
                         'status': 'error',
@@ -146,13 +141,10 @@ def validate_json_request(validator_func):
                         'code': 'INVALID_CONTENT_TYPE'
                     }), 400
                 
-                # Get JSON data
                 data = request.get_json(silent=True)
                 
-                # Validate data
                 validated_data = validator_func(data)
                 
-                # Store validated data for the route
                 request.validated_data = validated_data
                 
                 return route_func(*args, **kwargs)
@@ -187,7 +179,6 @@ def handle_database_errors(func):
             logger = logging.getLogger(__name__)
             logger.error(f"Database error in {func.__name__}: {str(e)}")
             
-            # Return a generic error response
             return jsonify({
                 'status': 'error',
                 'message': 'A database error occurred. Please try again.',

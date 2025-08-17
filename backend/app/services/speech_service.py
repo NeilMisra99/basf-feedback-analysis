@@ -30,7 +30,6 @@ class AzureSpeechService(BaseExternalService):
                 subscription=self.speech_key,
                 region=self.speech_region
             )
-            # Set default voice
             self.speech_config.speech_synthesis_voice_name = "en-US-AriaNeural"
             return True
         except Exception as e:
@@ -54,32 +53,25 @@ class AzureSpeechService(BaseExternalService):
             sentiment = sentiment_data.get('sentiment', 'neutral')
             confidence = sentiment_data.get('confidence_score', 0.5)
             
-            # Create SSML with emotion adaptation
             ssml = self._create_emotion_ssml(text, sentiment, confidence)
             
-            # Create audio file path - use absolute path for production
             if os.environ.get('FLASK_ENV') == 'production':
-                # In production, use a writable directory
                 audio_dir = os.path.join('/tmp', 'audio_files')
             else:
-                # In development, use project directory
                 audio_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'audio_files')
             
             os.makedirs(audio_dir, exist_ok=True)
             audio_path = os.path.join(audio_dir, f'{feedback_id}.mp3')
             
-            # Configure audio output
             audio_config = speechsdk.audio.AudioOutputConfig(filename=audio_path)
             synthesizer = speechsdk.SpeechSynthesizer(
                 speech_config=self.speech_config,
                 audio_config=audio_config
             )
             
-            # Generate audio using SSML
             result = synthesizer.speak_ssml_async(ssml).get()
             
             if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-                # Get audio file size
                 file_size = os.path.getsize(audio_path) if os.path.exists(audio_path) else 0
                 
                 logger.info(f"Audio generated successfully: {audio_path} ({file_size} bytes)")
@@ -87,7 +79,6 @@ class AzureSpeechService(BaseExternalService):
                 logger.info(f"Environment: {os.environ.get('FLASK_ENV', 'development')}")
                 logger.info(f"File exists check: {os.path.exists(audio_path)}")
                 
-                # Upload to Blob Storage if available
                 blob_url = None
                 sas_url = None
                 if self.blob_storage.is_available:
@@ -97,7 +88,6 @@ class AzureSpeechService(BaseExternalService):
                         sas_url = blob_result.data.get('sas_url')
                         logger.info(f"Audio uploaded to blob storage: {blob_url}")
                         
-                        # Clean up local file after successful upload
                         try:
                             os.remove(audio_path)
                             logger.info(f"Local audio file cleaned up: {audio_path}")
@@ -154,7 +144,6 @@ class AzureSpeechService(BaseExternalService):
         style_degree = self._get_style_degree(confidence)
         prosody_settings = self._get_prosody_for_sentiment(sentiment, confidence)
         
-        # Build SSML with emotion expression
         ssml = f"""
         <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" 
                xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">
@@ -182,47 +171,43 @@ class AzureSpeechService(BaseExternalService):
     def _get_emotion_style(self, sentiment: str, confidence: float) -> str:
         """Get emotion style based on sentiment and confidence using supported styles."""
         if sentiment == 'positive':
-            # JennyNeural supports: cheerful, excited, friendly, hopeful
             if confidence > 0.95:
-                return 'excited'  # Very high positive - match enthusiasm
+                return 'excited'
             elif confidence > 0.9:
-                return 'cheerful'  # High positive - upbeat response
+                return 'cheerful'
             elif confidence > 0.75:
-                return 'hopeful'  # Moderate positive - optimistic tone
+                return 'hopeful'
             else:
-                return 'friendly'  # Low confidence - warm baseline
+                return 'friendly'
         elif sentiment == 'negative':
-            # For negative feedback, adjust response based on intensity
-            # AriaNeural supports: empathetic, customerservice, friendly, hopeful
             if confidence > 0.95:
-                return 'hopeful'  # Very high negative - strong de-escalation focus
+                return 'hopeful'
             elif confidence > 0.9:
-                return 'empathetic'  # High negative - acknowledge feelings
+                return 'empathetic'
             elif confidence > 0.75:
-                return 'friendly'  # Moderate negative - warm approach
+                return 'friendly'
             else:
-                return 'customerservice'  # Low confidence - professional baseline
+                return 'customerservice'
         else:
-            # Neutral sentiment - AriaNeural supports: chat, customerservice, friendly, empathetic
             if confidence > 0.95:
-                return 'customerservice'  # Very high neutral - pure professional
+                return 'customerservice'
             elif confidence > 0.9:
-                return 'chat'  # High neutral - conversational
+                return 'chat'
             elif confidence > 0.75:
-                return 'friendly'  # Moderate neutral - approachable
+                return 'friendly'
             else:
-                return 'empathetic'  # Low confidence - show understanding
+                return 'empathetic'
     
     def _get_style_degree(self, confidence: float) -> str:
         """Get style intensity based on confidence level."""
         if confidence > 0.95:
-            return "1.3"  # Strong but controlled emotion
+            return "1.3"
         elif confidence > 0.9:
-            return "1.2"  # Moderate emotion
+            return "1.2"
         elif confidence > 0.75:
-            return "1.1"  # Slight emotion
+            return "1.1"
         else:
-            return "1.0"  # Neutral emotion
+            return "1.0"
     
     def _get_prosody_for_sentiment(self, sentiment: str, confidence: float) -> dict:
         """Get prosody settings - use engine defaults for rate and pitch."""
@@ -239,6 +224,5 @@ class AzureSpeechService(BaseExternalService):
     @staticmethod
     def estimate_duration(text: str) -> float:
         """Estimate audio duration based on text length."""
-        # Rough estimation: ~150 words per minute = 2.5 words per second
         word_count = len(text.split())
         return max(1.0, word_count / 2.5)

@@ -54,7 +54,6 @@ class BackgroundProcessor:
         self.processing_queue.put(feedback_id)
         logger.info(f"Queued feedback {feedback_id} for processing")
         
-        # Immediately send SSE update to ensure clients are aware of processing status
         if self.sse_manager and self.app:
             with self.app.app_context():
                 try:
@@ -84,7 +83,6 @@ class BackgroundProcessor:
             try:
                 logger.info(f"Starting processing for feedback {feedback_id}")
                 
-                # Send SSE update to confirm processing has started
                 feedback = _get_feedback_with_relations(feedback_id)
                 if feedback and self.sse_manager:
                     feedback.processing_status = 'processing'
@@ -112,5 +110,4 @@ class BackgroundProcessor:
         except Exception as e:
             logger.error(f"Failed to update feedback status: {str(e)}")
 
-# Global instance
 background_processor = BackgroundProcessor()

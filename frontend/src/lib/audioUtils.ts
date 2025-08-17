@@ -1,6 +1,4 @@
-/**
- * Utility functions for audio state management
- */
+/** Audio state helpers for controls. */
 
 export interface AudioControlState {
   isPlaying: boolean;
@@ -13,8 +11,9 @@ export function getAudioButtonState(
   audioState: { feedbackId: string | null; isPlaying: boolean },
   audioLoading: boolean
 ): AudioControlState {
-  const isCurrentlyPlaying = audioState.feedbackId === feedbackId && audioState.isPlaying;
-  
+  const isCurrentlyPlaying =
+    audioState.feedbackId === feedbackId && audioState.isPlaying;
+
   return {
     isPlaying: isCurrentlyPlaying,
     isLoading: audioLoading && audioState.feedbackId === feedbackId,

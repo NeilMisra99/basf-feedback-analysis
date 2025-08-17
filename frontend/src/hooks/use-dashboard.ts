@@ -129,7 +129,7 @@ export function useDashboard(): UseDashboardResult {
       });
     }
 
-    // Independently refresh stats once when an item completes processing
+    // Refresh stats once when an item transitions to completed
     if (
       latestFeedback &&
       latestFeedback.processing_status === "completed" &&

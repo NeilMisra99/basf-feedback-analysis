@@ -6,12 +6,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [
     react({
-      // Optimize JSX runtime
       jsxRuntime: "automatic",
     }),
     tailwindcss(),
   ],
-  // Define environment variables for browser
   define: {
     "process.env.REACT_APP_API_URL": JSON.stringify(
       process.env.REACT_APP_API_URL
@@ -22,7 +20,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Optimize dependency pre-bundling
   optimizeDeps: {
     include: [
       "react",
@@ -38,7 +35,6 @@ export default defineConfig({
   server: {
     host: true,
     port: 3000,
-    // Enable HTTP/2 for development and optimize HMR
     hmr: {
       overlay: true,
     },
@@ -57,13 +53,10 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
-    // Use esbuild for minification (faster and compatible)
     minify: "esbuild",
-    // Chunk size warning limit
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Enhanced manual chunks for better caching
         manualChunks: {
           vendor: ["react", "react-dom"],
           ui: [
@@ -81,7 +74,6 @@ export default defineConfig({
             "class-variance-authority",
           ],
         },
-        // Optimize chunk file names for caching
         chunkFileNames: (chunkInfo) => {
           const facadeModuleId = chunkInfo.facadeModuleId
             ? chunkInfo.facadeModuleId
