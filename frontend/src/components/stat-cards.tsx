@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { MessageSquare, TrendingUp, TrendingDown } from "lucide-react";
+import { MessageSquare, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { DashboardStats } from "../types";
 
 interface StatCardsProps {
@@ -23,6 +23,14 @@ export function StatCards({ stats }: StatCardsProps) {
       valueClass: "text-green-600",
       Icon: TrendingUp,
       iconClass: "text-green-600",
+    },
+    {
+      key: "neutral",
+      label: "Neutral",
+      value: stats.sentiment_breakdown.neutral || 0,
+      valueClass: "text-gray-600",
+      Icon: Minus,
+      iconClass: "text-gray-600",
     },
     {
       key: "negative",
