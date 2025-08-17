@@ -66,8 +66,32 @@ export default function Dashboard() {
 
       const response = await feedbackAPI.getAllFeedback(page, 5);
       if (response.status === "success") {
-        // Backend returns { status, data: [...], pagination: {...} }
-        setFeedback(response.data || []); // Ensure we always have an array
+        // Merge server data with any fresher SSE updates already in state
+        const serverList = response.data || [];
+        setFeedback((prev) => {
+          const byId = new Map<string, Feedback>(
+            serverList.map((i) => [i.id, i])
+          );
+
+          // Prefer items that are completed in prev over processing on server
+          prev.forEach((item) => {
+            const serverItem = byId.get(item.id);
+            if (!serverItem) return;
+            const preferPrev =
+              item.processing_status === "completed" &&
+              serverItem.processing_status !== "completed";
+            if (preferPrev) {
+              byId.set(item.id, item);
+            }
+          });
+
+          // If we have a latest SSE update for an item on this page, prefer it
+          if (latestFeedback && byId.has(latestFeedback.id)) {
+            byId.set(latestFeedback.id, latestFeedback);
+          }
+
+          return Array.from(byId.values());
+        });
         setPagination(response.pagination || null);
         setCurrentPage(page);
       } else {
@@ -113,19 +137,24 @@ export default function Dashboard() {
         (f) => f.id === latestFeedback.id
       );
       if (existingIndex >= 0) {
-        // Update existing feedback item with latest status
-        const updatedFeedback = [...prevFeedback];
-        updatedFeedback[existingIndex] = latestFeedback;
-        return updatedFeedback;
-      } else {
-        // Add new feedback at the beginning if it doesn't exist
-        return [latestFeedback, ...prevFeedback];
+        const prevItem = prevFeedback[existingIndex];
+        // Only replace if SSE state is not older than local (avoid regressions)
+        const shouldReplace =
+          prevItem.processing_status !== "completed" ||
+          latestFeedback.processing_status === "completed";
+        if (!shouldReplace) return prevFeedback;
+        const updated = [...prevFeedback];
+        updated[existingIndex] = latestFeedback;
+        return updated;
       }
+      return [latestFeedback, ...prevFeedback];
     });
 
     // On completion, refresh stats from server to avoid client-side drift
     if (latestFeedback.processing_status === "completed") {
-      loadDashboardStats();
+      // Defer stats refresh slightly to avoid race with backend commit
+      const t = setTimeout(() => loadDashboardStats(), 150);
+      return () => clearTimeout(t);
     }
   }, [latestFeedback]);
 

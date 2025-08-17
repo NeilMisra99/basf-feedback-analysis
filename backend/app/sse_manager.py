@@ -95,7 +95,7 @@ class SSEClient:
         try:
             while self.is_connected:
                 try:
-                    event = self.message_queue.get(timeout=15)
+                    event = self.message_queue.get(timeout=10)
                     yield event
                 except queue.Empty:
                     yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
