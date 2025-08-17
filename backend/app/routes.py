@@ -102,6 +102,11 @@ def submit_feedback():
         
         logger.info(f"Feedback {feedback.id} created successfully")
         
+        # Immediately set status to processing and notify clients
+        feedback.processing_status = 'processing'
+        db.session.commit()
+        sse_manager.send_feedback_update(feedback)
+        
         # Queue feedback for background processing
         background_processor.queue_feedback_processing(feedback.id)
         

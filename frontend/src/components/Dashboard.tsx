@@ -98,13 +98,8 @@ export default function Dashboard() {
   // Load data on mount and refresh
   useEffect(() => {
     if (refreshTrigger >= 0) {
-      // Small delay to ensure SSE connection is established
-      // This prevents missing the initial "processing" status
-      const timer = setTimeout(() => {
-        loadDashboardStats();
-        loadFeedback(1);
-      }, 100);
-      return () => clearTimeout(timer);
+      loadDashboardStats();
+      loadFeedback(1);
     }
   }, [refreshTrigger]);
 
