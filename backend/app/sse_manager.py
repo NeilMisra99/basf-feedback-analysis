@@ -99,9 +99,10 @@ class SSEClient:
         try:
             while self.is_connected:
                 try:
-                    event = self.message_queue.get(timeout=15)
+                    event = self.message_queue.get(timeout=30)
                     yield event
                 except queue.Empty:
+                    # Send heartbeat every 30 seconds (reduced frequency)
                     yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
         except Exception as e:
             logger.error(f"Error in SSE event generator for {self.client_id}: {str(e)}")

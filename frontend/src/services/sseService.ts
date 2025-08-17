@@ -155,18 +155,19 @@ class SSEService {
 
   private startWatchdog(): void {
     if (this.watchdogTimerId !== null) return;
-    // Check every 30s; if no event within 60s, force reconnect
+    // Check every 45s; if no event within 90s, force reconnect
+    // (Increased thresholds since backend sends heartbeat every 15s)
     this.watchdogTimerId = window.setInterval(() => {
       const now = Date.now();
-      if (this.eventSource && now - this.lastEventAt > 60000) {
+      if (this.eventSource && now - this.lastEventAt > 90000) {
         if (import.meta.env.DEV) {
           console.warn(
-            "[SSE] Watchdog detected inactivity >60s. Reconnecting..."
+            "[SSE] Watchdog detected inactivity >90s. Reconnecting..."
           );
         }
         this.handleReconnect();
       }
-    }, 30000);
+    }, 45000);
   }
 
   private stopWatchdog(): void {

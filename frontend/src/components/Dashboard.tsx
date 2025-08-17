@@ -104,9 +104,15 @@ export default function Dashboard() {
     }
   }, [refreshTrigger]);
 
+  // Track last SSE update time for intelligent polling
+  const [lastSSEUpdate, setLastSSEUpdate] = useState(Date.now());
+
   // Handle real-time feedback updates via SSE
   useEffect(() => {
     if (!latestFeedback) return;
+
+    // Track that we received an SSE update
+    setLastSSEUpdate(Date.now());
 
     // Always update the feedback list with the latest data
     setFeedback((prevFeedback) => {
@@ -130,24 +136,28 @@ export default function Dashboard() {
     }
   }, [latestFeedback]);
 
-  // Polling fallback for stuck processing items
+  // Smart polling fallback - only when SSE might be disconnected
   useEffect(() => {
     const checkStuckItems = () => {
       const hasProcessingItems = feedback.some(
         (f) => f.processing_status === "processing"
       );
       
-      if (hasProcessingItems) {
-        // Reload feedback to get latest status
+      // Only reload if:
+      // 1. We have processing items AND
+      // 2. Haven't received SSE update in last 10 seconds
+      const timeSinceLastSSE = Date.now() - lastSSEUpdate;
+      if (hasProcessingItems && timeSinceLastSSE > 10000) {
         loadFeedback(currentPage);
+        setLastSSEUpdate(Date.now()); // Reset to avoid rapid reloads
       }
     };
 
-    // Check every 3 seconds for stuck items
-    const intervalId = setInterval(checkStuckItems, 3000);
+    // Check every 15 seconds (much less aggressive)
+    const intervalId = setInterval(checkStuckItems, 15000);
 
     return () => clearInterval(intervalId);
-  }, [feedback, currentPage]);
+  }, [feedback, currentPage, lastSSEUpdate]);
 
   if (statsLoading && (!feedback || feedback.length === 0)) {
     return <DashboardSkeleton />;
