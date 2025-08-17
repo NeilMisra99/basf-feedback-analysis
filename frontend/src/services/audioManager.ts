@@ -93,6 +93,14 @@ export class AudioManager {
 
   async playAudio(feedbackId: string, audioUrl: string): Promise<void> {
     try {
+      // Extra safety: pause any cached audio elements to prevent overlap
+      this.audioPreloadCache.forEach((element) => {
+        if (!element.paused) {
+          element.pause();
+          element.currentTime = 0;
+        }
+      });
+
       // Stop current audio if playing
       this.stopCurrent();
 
@@ -102,12 +110,19 @@ export class AudioManager {
       if (!audio) {
         audio = new Audio(audioUrl);
         this.audioPreloadCache.set(audioUrl, audio);
+      } else {
+        // Ensure cached audio still has a valid src (it may have been cleared during cleanup)
+        if (audio.src !== audioUrl) {
+          audio.src = audioUrl;
+        }
       }
 
       this.currentAudio = audio;
       this.currentFeedbackId = feedbackId;
 
       this.setupAudioEventListeners(audio);
+
+      this.notify();
 
       await this.startPlayback(audio);
       this.notify();
@@ -196,6 +211,7 @@ export class AudioManager {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
+      this.notify();
     }
   }
 
@@ -212,6 +228,13 @@ export class AudioManager {
       this.currentAudio.pause();
       this.currentAudio.src = "";
       this.currentAudio.load(); // This helps with memory cleanup
+      // If this audio element is cached, evict it so we don't reuse a cleared element
+      for (const [url, element] of this.audioPreloadCache.entries()) {
+        if (element === this.currentAudio) {
+          this.audioPreloadCache.delete(url);
+          break;
+        }
+      }
     }
     this.currentAudio = null;
     this.currentFeedbackId = null;

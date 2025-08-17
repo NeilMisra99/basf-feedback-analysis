@@ -174,8 +174,8 @@ class AzureSpeechService(BaseExternalService):
         """Select appropriate voice based on sentiment with proper voice names."""
         voice_mapping = {
             'positive': 'en-US-JennyNeural',    # Supports: cheerful, excited, friendly, hopeful
-            'negative': 'en-US-AriaNeural',     # Using AriaNeural for negative to avoid slowness
-            'neutral': 'en-US-AriaNeural'       # Supports: assistant, chat, newscast
+            'negative': 'en-US-AriaNeural',     # Supports: empathetic, customerservice, hopeful, friendly
+            'neutral': 'en-US-AriaNeural'       # Supports: chat, customerservice, friendly
         }
         return voice_mapping.get(sentiment, voice_mapping['neutral'])
     
@@ -183,38 +183,50 @@ class AzureSpeechService(BaseExternalService):
         """Get emotion style based on sentiment and confidence using supported styles."""
         if sentiment == 'positive':
             # JennyNeural supports: cheerful, excited, friendly, hopeful
-            return 'excited' if confidence > 0.8 else 'cheerful' if confidence > 0.6 else 'friendly'
+            if confidence > 0.95:
+                return 'excited'  # Very high positive - match enthusiasm
+            elif confidence > 0.9:
+                return 'cheerful'  # High positive - upbeat response
+            elif confidence > 0.75:
+                return 'hopeful'  # Moderate positive - optimistic tone
+            else:
+                return 'friendly'  # Low confidence - warm baseline
         elif sentiment == 'negative':
-            # AriaNeural supports multiple negative emotion styles based on confidence
-            if confidence > 0.8:
-                return 'sad'  # Strong negative emotion
-            elif confidence > 0.6:
-                return 'empathetic'  # Understanding and caring
+            # For negative feedback, adjust response based on intensity
+            # AriaNeural supports: empathetic, customerservice, friendly, hopeful
+            if confidence > 0.95:
+                return 'hopeful'  # Very high negative - strong de-escalation focus
+            elif confidence > 0.9:
+                return 'empathetic'  # High negative - acknowledge feelings
+            elif confidence > 0.75:
+                return 'friendly'  # Moderate negative - warm approach
             else:
-                return 'calm'  # Gentle, composed response to mild negativity
+                return 'customerservice'  # Low confidence - professional baseline
         else:
-            # Neutral sentiment - AriaNeural supports multiple neutral styles
-            if confidence > 0.7:
-                return 'narration-professional'  # High confidence neutral - professional tone
-            elif confidence > 0.5:
-                return 'assistant'  # Medium confidence neutral - helpful tone
+            # Neutral sentiment - AriaNeural supports: chat, customerservice, friendly, empathetic
+            if confidence > 0.95:
+                return 'customerservice'  # Very high neutral - pure professional
+            elif confidence > 0.9:
+                return 'chat'  # High neutral - conversational
+            elif confidence > 0.75:
+                return 'friendly'  # Moderate neutral - approachable
             else:
-                return 'chat'  # Low confidence neutral - casual, conversational tone
+                return 'empathetic'  # Low confidence - show understanding
     
     def _get_style_degree(self, confidence: float) -> str:
         """Get style intensity based on confidence level."""
-        if confidence > 0.9:
+        if confidence > 0.95:
             return "1.3"  # Strong but controlled emotion
-        elif confidence > 0.7:
+        elif confidence > 0.9:
             return "1.2"  # Moderate emotion
-        elif confidence > 0.5:
+        elif confidence > 0.75:
             return "1.1"  # Slight emotion
         else:
             return "1.0"  # Neutral emotion
     
     def _get_prosody_for_sentiment(self, sentiment: str, confidence: float) -> dict:
-        """Get prosody settings - keeping it simple with just medium rate for all."""
-        return {'rate': 'medium', 'pitch': 'medium'}
+        """Get prosody settings - use engine defaults for rate and pitch."""
+        return {'rate': 'default', 'pitch': 'default'}
     
     def _escape_ssml_text(self, text: str) -> str:
         """Escape special characters in SSML."""

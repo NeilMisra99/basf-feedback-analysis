@@ -58,7 +58,8 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
   const isCurrentlyPlaying = audioButtonState.isPlaying;
 
   const toggleAudio = async () => {
-    if (!feedback.audio_file || !feedback.audio_url) return;
+    // Guard: require an audio file id; backend will give us the URL
+    if (!feedback.audio_file) return;
 
     try {
       if (isCurrentlyPlaying) {
