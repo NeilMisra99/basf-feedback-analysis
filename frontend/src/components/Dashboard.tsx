@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
 import { useFeedback } from "../contexts/FeedbackContext";
-import { sseService } from "../services/sseService";
 import type { Feedback, DashboardStats, PaginationInfo } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import {
@@ -99,18 +98,9 @@ export default function Dashboard() {
   // Load data on mount and refresh
   useEffect(() => {
     if (refreshTrigger >= 0) {
-      // Ensure SSE is connected before loading data
-      const loadData = async () => {
-        try {
-          // Wait for SSE connection (max 1 second)
-          await sseService.waitForConnection(1000);
-        } catch {
-          // Continue loading data even if SSE connection fails
-        }
-        loadDashboardStats();
-        loadFeedback(1);
-      };
-      loadData();
+      // Always load fresh data immediately
+      loadDashboardStats();
+      loadFeedback(1);
     }
   }, [refreshTrigger]);
 
@@ -139,6 +129,25 @@ export default function Dashboard() {
       loadDashboardStats();
     }
   }, [latestFeedback]);
+
+  // Polling fallback for stuck processing items
+  useEffect(() => {
+    const checkStuckItems = () => {
+      const hasProcessingItems = feedback.some(
+        (f) => f.processing_status === "processing"
+      );
+      
+      if (hasProcessingItems) {
+        // Reload feedback to get latest status
+        loadFeedback(currentPage);
+      }
+    };
+
+    // Check every 3 seconds for stuck items
+    const intervalId = setInterval(checkStuckItems, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [feedback, currentPage]);
 
   if (statsLoading && (!feedback || feedback.length === 0)) {
     return <DashboardSkeleton />;

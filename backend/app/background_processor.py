@@ -54,6 +54,16 @@ class BackgroundProcessor:
         self.processing_queue.put(feedback_id)
         logger.info(f"Queued feedback {feedback_id} for processing")
         
+        # Immediately send SSE update to ensure clients are aware of processing status
+        if self.sse_manager and self.app:
+            with self.app.app_context():
+                try:
+                    feedback = _get_feedback_with_relations(feedback_id)
+                    if feedback and self.sse_manager:
+                        self.sse_manager.send_feedback_update(feedback)
+                except Exception as e:
+                    logger.error(f"Failed to send immediate SSE update: {str(e)}")
+        
     def _worker_loop(self):
         """Main worker loop for processing feedback."""
         while self.is_running:
@@ -73,6 +83,13 @@ class BackgroundProcessor:
         with self.app.app_context():
             try:
                 logger.info(f"Starting processing for feedback {feedback_id}")
+                
+                # Send SSE update to confirm processing has started
+                feedback = _get_feedback_with_relations(feedback_id)
+                if feedback and self.sse_manager:
+                    feedback.processing_status = 'processing'
+                    db.session.commit()
+                    self.sse_manager.send_feedback_update(feedback)
                 
                 success = self.feedback_processor.process_feedback_complete(feedback_id)
                 self._update_feedback_status(feedback_id, 'completed' if success else 'failed')
