@@ -30,10 +30,6 @@ flowchart LR
   API --> DB
 ```
 
-![Architecture Diagram](https://github.com/NeilMisra99/basf-feedback-analysis/blob/f7e25f01290f91dec126f01c3ac14c1d7422ceae/docs/architecture-diagram.png?raw=1)
-
-[Open the diagram](https://github.com/NeilMisra99/basf-feedback-analysis/blob/f7e25f01290f91dec126f01c3ac14c1d7422ceae/docs/architecture-diagram.png?raw=1)
-
 Key flows:
 
 - Submit feedback → queued → sentiment → AI response → (optional) audio → DB/Blob → SSE updates to UI
