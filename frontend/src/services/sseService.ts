@@ -34,17 +34,10 @@ class SSEService {
       return;
     }
 
-    if (import.meta.env.DEV) {
-      console.log(`[SSE] Connecting to ${this.apiUrl}/events`);
-    }
-
     try {
       this.eventSource = new EventSource(`${this.apiUrl}/events`);
 
       this.eventSource.onopen = () => {
-        if (import.meta.env.DEV) {
-          console.log("[SSE] Connection opened successfully");
-        }
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.lastEventAt = Date.now();
@@ -54,9 +47,6 @@ class SSEService {
       this.eventSource.onmessage = (event) => {
         try {
           const data: SSEEvent = JSON.parse(event.data);
-          if (import.meta.env.DEV) {
-            console.log("[SSE] Received event:", data.type, data);
-          }
           this.lastEventAt = Date.now();
           this.reconnectAttempts = 0;
 

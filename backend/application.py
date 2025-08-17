@@ -15,17 +15,48 @@ if os.environ.get('FLASK_ENV') != 'production':
     load_dotenv(os.path.join(root_dir, '.env'))
     
     # Verify critical environment variables are loaded (development only)
-    required_vars = ['SECRET_KEY']
+    # Require all external service keys in local dev to avoid silent fallbacks
+    required_vars = [
+        'SECRET_KEY',
+        'AZURE_STORAGE_CONNECTION_STRING',
+        'AZURE_TEXT_ANALYTICS_ENDPOINT',
+        'AZURE_TEXT_ANALYTICS_KEY',
+        'AZURE_SPEECH_KEY',
+        'AZURE_SPEECH_REGION',
+        'OPENAI_API_KEY',
+    ]
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
     
     if missing_vars:
         print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
         print(f"Please ensure .env.local exists in: {root_dir}")
+        # Helpful hints per variable
+        hints = {
+            'SECRET_KEY': 'Set a development secret, e.g., SECRET_KEY=dev-secret',
+            'AZURE_STORAGE_CONNECTION_STRING': 'Required for serving generated audio locally.',
+            'AZURE_TEXT_ANALYTICS_ENDPOINT': 'Azure Text Analytics endpoint URL is required.',
+            'AZURE_TEXT_ANALYTICS_KEY': 'Azure Text Analytics API key is required.',
+            'AZURE_SPEECH_KEY': 'Azure Speech API key is required for TTS audio.',
+            'AZURE_SPEECH_REGION': 'Azure Speech region (e.g., eastus) is required.',
+            'OPENAI_API_KEY': 'OpenAI API key is required to generate AI responses.',
+        }
+        for var in missing_vars:
+            if var in hints:
+                print(f" - {var}: {hints[var]}")
         sys.exit(1)
     
 else:
     # Production mode - validate environment variables are set by Container Apps
-    required_vars = ['SECRET_KEY', 'AZURE_TEXT_ANALYTICS_KEY', 'AZURE_SPEECH_KEY', 'OPENAI_API_KEY']
+    required_vars = [
+        'SECRET_KEY',
+        'AZURE_TEXT_ANALYTICS_ENDPOINT',
+        'AZURE_TEXT_ANALYTICS_KEY',
+        'AZURE_SPEECH_KEY',
+        'AZURE_SPEECH_REGION',
+        'AZURE_STORAGE_CONNECTION_STRING',
+        'OPENAI_API_KEY',
+        'CORS_ORIGINS',
+    ]
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
     
     if missing_vars:
