@@ -7,6 +7,7 @@ import {
   TrendingUp,
   TrendingDown,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
 import { useFeedback } from "../contexts/FeedbackContext";
@@ -33,6 +34,7 @@ export default function Dashboard() {
 
   // Real-time updates
   const { latestFeedback, refreshTrigger } = useFeedback();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadDashboardStats = async () => {
     try {
@@ -84,9 +86,13 @@ export default function Dashboard() {
     loadFeedback(page);
   };
 
-  const handleRefresh = () => {
-    loadDashboardStats();
-    loadFeedback(currentPage);
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await Promise.all([loadDashboardStats(), loadFeedback(currentPage)]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Load data on mount and refresh
@@ -206,20 +212,40 @@ export default function Dashboard() {
 
       {/* Feedback Section Header */}
       <div className="flex-shrink-0 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold">All Feedback</h2>
-          <p className="text-sm text-muted-foreground">
-            {pagination &&
-              pagination.total > 0 &&
-              `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
-          </p>
+        <div className="flex items-center justify-between pr-2">
+          <div>
+            <h2 className="text-lg font-semibold">All Feedback</h2>
+            <p className="text-sm text-muted-foreground">
+              {pagination &&
+                pagination.total > 0 &&
+                `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
+            </p>
+          </div>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            className="!bg-white !text-black border-gray-300 shadow-none"
+            disabled={isRefreshing || !feedback || feedback.length === 0}
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
       {/* Feedback List */}
       <div className="flex-1 overflow-hidden">
         <div className="max-h-[500px] overflow-y-auto pr-2">
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2">
             {feedbackError ? (
               <div className="text-center py-8">
                 <MessageSquare className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -263,28 +289,18 @@ export default function Dashboard() {
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex-shrink-0 my-4">
-        {pagination ? (
+      {pagination && pagination.pages > 1 ? (
+        <div className="flex-shrink-0 mt-4">
           <Pagination
             currentPage={currentPage}
             totalPages={pagination.pages}
             onPageChange={handlePageChange}
             disabled={feedbackLoading}
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {/* Refresh Button */}
-      <div className="flex-shrink-0 flex justify-center pt-4">
-        <Button
-          onClick={handleRefresh}
-          variant="outline"
-          className="!bg-white !text-black border-gray-300"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      {/* Refresh Button moved to header */}
     </div>
   );
 }
