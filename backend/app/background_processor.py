@@ -73,6 +73,8 @@ class BackgroundProcessor:
         with self.app.app_context():
             try:
                 logger.info(f"Starting processing for feedback {feedback_id}")
+                self._update_feedback_status(feedback_id, 'processing')
+                
                 success = self.feedback_processor.process_feedback_complete(feedback_id)
                 self._update_feedback_status(feedback_id, 'completed' if success else 'failed')
                 logger.info(f"Feedback {feedback_id} processing {'completed' if success else 'failed'}")

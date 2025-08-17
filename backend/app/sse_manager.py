@@ -48,6 +48,10 @@ class SSEManager:
         }
         
         with self.lock:
+            if not self.clients:
+                logger.warning(f"No SSE clients connected to receive feedback update for {feedback.id}")
+                return
+                
             disconnected_clients = [
                 client_id for client_id, client in self.clients.items()
                 if not self._send_event_to_client(client, event_data)
