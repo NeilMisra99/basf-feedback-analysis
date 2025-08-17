@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { feedbackAPI } from "../services/api";
 import { useFeedback } from "../contexts/FeedbackContext";
+import { sseService } from "../services/sseService";
 import type { Feedback, DashboardStats, PaginationInfo } from "../types";
 import FeedbackCard from "./FeedbackCard";
 import {
@@ -98,8 +99,18 @@ export default function Dashboard() {
   // Load data on mount and refresh
   useEffect(() => {
     if (refreshTrigger >= 0) {
-      loadDashboardStats();
-      loadFeedback(1);
+      // Ensure SSE is connected before loading data
+      const loadData = async () => {
+        try {
+          // Wait for SSE connection (max 1 second)
+          await sseService.waitForConnection(1000);
+        } catch {
+          // Continue loading data even if SSE connection fails
+        }
+        loadDashboardStats();
+        loadFeedback(1);
+      };
+      loadData();
     }
   }, [refreshTrigger]);
 

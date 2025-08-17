@@ -112,6 +112,32 @@ class SSEService {
   }
 
   /**
+   * Wait for connection to be established
+   */
+  waitForConnection(timeout: number = 5000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.isConnected) {
+        resolve();
+        return;
+      }
+
+      const checkInterval = 50; // Check every 50ms
+      let elapsed = 0;
+
+      const intervalId = setInterval(() => {
+        if (this.isConnected) {
+          clearInterval(intervalId);
+          resolve();
+        } else if (elapsed >= timeout) {
+          clearInterval(intervalId);
+          reject(new Error("SSE connection timeout"));
+        }
+        elapsed += checkInterval;
+      }, checkInterval);
+    });
+  }
+
+  /**
    * Handle reconnection logic
    */
   private handleReconnect(): void {
