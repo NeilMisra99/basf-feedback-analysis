@@ -1,151 +1,32 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  MessageSquare,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-  Loader2,
-} from "lucide-react";
-import { feedbackAPI } from "../services/api";
-import { useFeedback } from "../contexts/FeedbackContext";
-import type { Feedback, DashboardStats, PaginationInfo } from "../types";
+import { MessageSquare, RefreshCw, Loader2 } from "lucide-react";
 import FeedbackCard from "./FeedbackCard";
 import {
   DashboardSkeleton,
   FeedbackCardSkeleton,
   StatCardSkeleton,
 } from "./ui/loading";
-import { getErrorMessageWithFallback } from "../lib/errorUtils";
+import { StatCards } from "./stat-cards";
+import { useDashboard } from "../hooks/use-dashboard";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [statsError, setStatsError] = useState<string | null>(null);
-
-  // Pagination state
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-  const [feedbackError, setFeedbackError] = useState<string | null>(null);
-
-  // Real-time updates
-  const { latestFeedback, refreshTrigger } = useFeedback();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const loadDashboardStats = async () => {
-    try {
-      setStatsLoading(true);
-      setStatsError(null);
-
-      const statsResponse = await feedbackAPI.getDashboardStats();
-      if (statsResponse.status === "success" && statsResponse.data) {
-        setStats(statsResponse.data);
-      } else {
-        throw new Error(
-          statsResponse.message || "Failed to load dashboard stats"
-        );
-      }
-    } catch (err: unknown) {
-      setStatsError(
-        getErrorMessageWithFallback(err, "Failed to load dashboard stats")
-      );
-    } finally {
-      setStatsLoading(false);
-    }
-  };
-
-  const loadFeedback = async (page: number = 1) => {
-    try {
-      setFeedbackLoading(true);
-      setFeedbackError(null);
-      setPagination(null); // Clear pagination during loading
-
-      const response = await feedbackAPI.getAllFeedback(page, 5);
-      if (response.status === "success") {
-        // Backend returns { status, data: [...], pagination: {...} }
-        setFeedback(response.data || []); // Ensure we always have an array
-        setPagination(response.pagination || null);
-        setCurrentPage(page);
-      } else {
-        throw new Error(response.message || "Failed to load feedback");
-      }
-    } catch (err: unknown) {
-      setFeedbackError(
-        getErrorMessageWithFallback(err, "Failed to load feedback")
-      );
-    } finally {
-      setFeedbackLoading(false);
-    }
-  };
-
-  const handlePageChange = (page: number) => {
-    loadFeedback(page);
-  };
-
-  const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
-      await Promise.all([loadDashboardStats(), loadFeedback(currentPage)]);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Load data on mount and refresh
-  useEffect(() => {
-    if (refreshTrigger >= 0) {
-      // Always load fresh data immediately
-      loadDashboardStats();
-      loadFeedback(1);
-    }
-  }, [refreshTrigger]);
-
-  // Handle real-time feedback updates via SSE
-  useEffect(() => {
-    if (!latestFeedback) return;
-
-    // Always update the feedback list with the latest data
-    setFeedback((prevFeedback) => {
-      const existingIndex = prevFeedback.findIndex(
-        (f) => f.id === latestFeedback.id
-      );
-      if (existingIndex >= 0) {
-        // Update existing feedback item with latest status
-        const updatedFeedback = [...prevFeedback];
-        updatedFeedback[existingIndex] = latestFeedback;
-        return updatedFeedback;
-      } else {
-        // Add new feedback at the beginning if it doesn't exist
-        return [latestFeedback, ...prevFeedback];
-      }
-    });
-
-    // On completion, refresh stats from server to avoid client-side drift
-    if (latestFeedback.processing_status === "completed") {
-      loadDashboardStats();
-    }
-  }, [latestFeedback]);
-
-  // Quick re-fetch for processing items (handles tab switch race condition)
-  useEffect(() => {
-    // If we have any processing items, do a quick re-fetch after 1 second
-    // This catches the case where we loaded right before the status changed
-    const hasProcessingItems = feedback.some(
-      (f) => f.processing_status === "processing"
-    );
-    
-    if (hasProcessingItems) {
-      const timer = setTimeout(() => {
-        loadFeedback(currentPage);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [feedback, currentPage]);
+  const {
+    stats,
+    statsLoading,
+    statsError,
+    feedback,
+    feedbackLoading,
+    feedbackError,
+    currentPage,
+    pagination,
+    isRefreshing,
+    rangeText,
+    handlePageChange,
+    handleRefresh,
+    reloadFeedback,
+  } = useDashboard();
 
   if (statsLoading && (!feedback || feedback.length === 0)) {
     return <DashboardSkeleton />;
@@ -183,47 +64,7 @@ export default function Dashboard() {
               <StatCardSkeleton />
             </>
           ) : stats ? (
-            <>
-              <Card className="p-4 shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Total Feedback
-                    </p>
-                    <p className="text-2xl font-bold">{stats.total_feedback}</p>
-                  </div>
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </Card>
-
-              <Card className="p-4 shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Positive
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {stats.sentiment_breakdown.positive || 0}
-                    </p>
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                </div>
-              </Card>
-
-              <Card className="p-4 shadow-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Negative
-                    </p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {stats.sentiment_breakdown.negative || 0}
-                    </p>
-                  </div>
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                </div>
-              </Card>
-            </>
+            <StatCards stats={stats} />
           ) : null}
         </div>
       </div>
@@ -233,11 +74,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between pr-2">
           <div>
             <h2 className="text-lg font-semibold">All Feedback</h2>
-            <p className="text-sm text-muted-foreground">
-              {pagination &&
-                pagination.total > 0 &&
-                `Showing ${(currentPage - 1) * pagination.per_page + 1}-${Math.min(currentPage * pagination.per_page, pagination.total)} of ${pagination.total} items`}
-            </p>
+            <p className="text-sm text-muted-foreground">{rangeText}</p>
           </div>
           <Button
             onClick={handleRefresh}
@@ -274,7 +111,7 @@ export default function Dashboard() {
                   {feedbackError}
                 </p>
                 <Button
-                  onClick={() => loadFeedback(currentPage)}
+                  onClick={() => reloadFeedback(currentPage)}
                   variant="outline"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -283,7 +120,7 @@ export default function Dashboard() {
               </div>
             ) : feedbackLoading ? (
               <>
-                {[...Array(5)].map((_, i) => (
+                {Array.from({ length: 5 }).map((_, i) => (
                   <FeedbackCardSkeleton key={i} />
                 ))}
               </>
@@ -317,8 +154,6 @@ export default function Dashboard() {
           />
         </div>
       ) : null}
-
-      {/* Refresh Button moved to header */}
     </div>
   );
 }
