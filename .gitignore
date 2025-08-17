@@ -66,12 +66,6 @@ coverage/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Docs
-docs/
-# Documentation and Markdown files
-!README.md
-*.md
-
 # Claude
 .claude
 
