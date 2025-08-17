@@ -94,19 +94,29 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
   return (
     <Card className="transition-colors rounded-lg shadow-none">
       <CardContent className="px-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className="bg-white text-black">{feedback.category}</Badge>
-              {processingStatusDisplay && (
-                <Badge className={`gap-1 ${processingStatusDisplay.className}`}>
-                  <processingStatusDisplay.icon
-                    className={`h-4 w-4 ${feedback.processing_status === "processing" ? "animate-spin" : ""}`}
-                  />
-                  {processingStatusDisplay.text}
+            <div className="mb-2">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-white text-black">
+                  {feedback.category}
                 </Badge>
-              )}
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                {processingStatusDisplay && (
+                  <Badge
+                    className={`gap-1 ${processingStatusDisplay.className}`}
+                  >
+                    <processingStatusDisplay.icon
+                      className={`h-4 w-4 ${feedback.processing_status === "processing" ? "animate-spin" : ""}`}
+                    />
+                    {processingStatusDisplay.text}
+                  </Badge>
+                )}
+                <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {formatDate(feedback.created_at)}
+                </div>
+              </div>
+              <div className="flex sm:hidden items-center gap-1 text-xs text-muted-foreground mt-1">
                 <Clock className="h-3 w-3" />
                 {formatDate(feedback.created_at)}
               </div>
@@ -159,21 +169,10 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
                 </span>
               </div>
             )}
-
-            {feedback.ai_response && isProcessingCompleted && (
-              <div className="rounded-lg p-2 bg-gray-50">
-                <h4 className="text-sm font-medium text-foreground mb-1">
-                  AI Response
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  {feedback.ai_response.response_text}
-                </p>
-              </div>
-            )}
           </div>
 
           {feedback.audio_file && isProcessingCompleted && (
-            <div className="flex-shrink-0 flex gap-2">
+            <div className="flex-shrink-0 flex gap-2 sm:self-start">
               <Button
                 onClick={toggleAudio}
                 disabled={audioLoading}
@@ -214,6 +213,17 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
             </div>
           )}
         </div>
+
+        {feedback.ai_response && isProcessingCompleted && (
+          <div className="rounded-lg p-2 bg-gray-50 w-full mt-2">
+            <h4 className="text-sm font-medium text-foreground mb-1">
+              AI Response
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {feedback.ai_response.response_text}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
