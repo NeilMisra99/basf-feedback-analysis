@@ -6,7 +6,7 @@ A full-stack web application that analyzes customer feedback using Azure AI serv
 
 - 📝 **Feedback Submission** - Simple form for collecting customer feedback
 - 🎯 **Sentiment Analysis** - Azure Text Analytics processes feedback to determine positive, negative, or neutral sentiment
-- 🤖 **AI-Powered Responses** - OpenAI GPT-4 generates contextual, sentiment-appropriate responses
+- 🤖 **AI-Powered Responses** - OpenAI GPT-4o generates contextual, sentiment-appropriate responses
 - 🎵 **Emotion-Aware Audio** - Azure Speech Services creates audio responses with emotion-based voice styles
 - 📊 **Interactive Dashboard** - View all feedback with sentiment scores, AI responses, and audio playback
 - 📱 **Responsive Design** - Modern React UI that works on desktop and mobile
