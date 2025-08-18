@@ -128,6 +128,46 @@ Indexes are added for common queries (status, created_at, category, sentiment).
 
 SSE keeps dashboard responsive; `frontend/src/hooks/use-dashboard.ts` also refreshes items still `processing`.
 
+### Speech synthesis: voices and emotion styles
+
+- Voice selection
+  - Positive sentiment → `en-US-JennyNeural`
+  - Negative/Neutral sentiment → `en-US-AriaNeural`
+
+- Emotion style by confidence thresholds
+  - Positive (JennyNeural)
+    - 0.95 → `excited`
+
+    - 0.90 → `cheerful`
+
+    - 0.75 → `hopeful`
+
+    - else → `friendly`
+
+  - Negative (AriaNeural)
+    - 0.95 → `hopeful`
+
+    - 0.90 → `empathetic`
+
+    - 0.75 → `friendly`
+
+    - else → `customerservice`
+
+  - Neutral (AriaNeural)
+    - 0.95 → `customerservice`
+
+    - 0.90 → `chat`
+
+    - 0.75 → `friendly`
+
+    - else → `empathetic`
+
+- Style intensity (`styledegree`)
+  - 0.95 → `1.3`, &gt; 0.90 → `1.2`, &gt; 0.75 → `1.1`, else → `1.0`
+
+- Prosody
+  - Defaults to engine values (`rate: default`, `pitch: default`); text is safely escaped for SSML.
+
 ### Frontend Structure (essentials)
 
 - `components/FeedbackForm.tsx`: submits feedback (react-hook-form + zod)
@@ -157,7 +197,3 @@ SSE keeps dashboard responsive; `frontend/src/hooks/use-dashboard.ts` also refre
 - SSE not updating: verify `/api/v1/events` reachability, CORS, and network; check server logs
 - Audio 404: ensure Speech and Blob credentials; confirm `audio_files` DB row and blob existence in the container
 - Long waits on first request: cold start; CI/CD deploy just finished or container scaled to zero
-
-### License & Contributions
-
-Internal usage example; adapt license and contribution guidelines as needed.
