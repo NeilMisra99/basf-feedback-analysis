@@ -27,7 +27,7 @@ class Config:
     OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o')
     
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    AUDIO_FILES_DIR = os.path.join(os.path.dirname(__file__), '..', 'audio_files')
+    AUDIO_FILES_DIR = '/tmp'
     
     @classmethod
     def validate_config(cls) -> Dict[str, Any]:

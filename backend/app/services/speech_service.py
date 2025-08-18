@@ -55,12 +55,7 @@ class AzureSpeechService(BaseExternalService):
             
             ssml = self._create_emotion_ssml(text, sentiment, confidence)
             
-            if os.environ.get('FLASK_ENV') == 'production':
-                audio_dir = os.path.join('/tmp', 'audio_files')
-            else:
-                audio_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'audio_files')
-            
-            os.makedirs(audio_dir, exist_ok=True)
+            audio_dir = '/tmp'
             audio_path = os.path.join(audio_dir, f'{feedback_id}.mp3')
             
             audio_config = speechsdk.audio.AudioOutputConfig(filename=audio_path)
