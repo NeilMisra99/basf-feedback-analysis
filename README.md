@@ -88,7 +88,7 @@ You'll need **two Azure resource groups**:
 1. **Sign up** at [OpenAI Platform](https://platform.openai.com/signup)
 2. **Add payment method** (required for API access)
 3. **Create API key**:
-   - Go to [API Keys](https://platform.openai.com/api-keys)
+   - Go to API Keys
    - Click "Create new secret key"
    - Name: "Feedback Analysis App"
    - **Save the key** (starts with `sk-`)
@@ -186,7 +186,7 @@ Create a **new resource group** for hosting your application (your AI services a
 2. **Configure**:
    - **Resource Group**: Create new `feedback-analysis-rg`
    - **Registry name**: `basffeedbackregistry` (must be globally unique)
-   - **Location**: East US (same as your AI services)
+   - **Location**: East US (or whatever's closest to you)
    - **SKU**: Basic (sufficient for demo)
 3. **Enable Admin user**: Settings → Access keys → Admin user (Enable)
 
@@ -196,7 +196,7 @@ Create a **new resource group** for hosting your application (your AI services a
 2. **Configure**:
    - **Resource Group**: `feedback-analysis-rg`
    - **Storage account name**: `basffeedbackstorage` (must be globally unique)
-   - **Region**: East US
+   - **Region**: East US (or whatever's closest to you)
    - **Performance**: Standard
    - **Redundancy**: LRS (Locally-redundant storage)
 3. **Get connection string**: Access keys → Show keys → Connection string
@@ -207,7 +207,7 @@ Create a **new resource group** for hosting your application (your AI services a
 2. **Configure**:
    - **Resource Group**: `feedback-analysis-rg`
    - **Environment name**: `basf-feedback-env`
-   - **Region**: East US
+   - **Region**: East US (or whatever's closest to you)
 
 **Create Container App:**
 
