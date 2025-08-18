@@ -114,7 +114,7 @@ Error shape (typical): `{ status: "error", message: string, code?: string }`
   - `feedback_id`, `response_text`, `model_used`
 
 - `audio_files`:
-  - `feedback_id`, `file_path`, `blob_url?`, `file_size?`, `storage_type` (local|blob)
+  - `feedback_id`, `file_path` (ephemeral `/tmp` path during synthesis), `blob_url?`, `file_size?`, `storage_type` (local|blob)
 
 Indexes are added for common queries (status, created_at, category, sentiment).
 
@@ -149,13 +149,13 @@ SSE keeps dashboard responsive; `frontend/src/hooks/use-dashboard.ts` also refre
 
 - `SECRET_KEY` required; CORS configured via `CORS_ORIGINS`
 - Production: strict env validation, Gunicorn with thread workers for SSE
-- Audio files uploaded to Blob in production; local temp used during synthesis
+- Audio files uploaded to Blob in production; a temporary file is written to `/tmp` during synthesis and then cleaned up (no project-level `audio_files/` directory)
 
 ### Troubleshooting
 
 - Backend exits at startup: missing env vars; check `.env.local` (dev) or Container Apps settings (prod)
 - SSE not updating: verify `/api/v1/events` reachability, CORS, and network; check server logs
-- Audio 404: ensure Speech and Blob credentials; confirm `audio_files` row and container existence
+- Audio 404: ensure Speech and Blob credentials; confirm `audio_files` DB row and blob existence in the container
 - Long waits on first request: cold start; CI/CD deploy just finished or container scaled to zero
 
 ### License & Contributions
