@@ -78,7 +78,7 @@ Notes:
 - In development, missing env vars cause startup to exit with a helpful message (`backend/application.py`).
 - In production, all critical env vars are required and validated on boot.
 
-### API Reference (concise)
+### API Reference
 
 - GET `/api/v1/health`
   - Returns service and DB status
